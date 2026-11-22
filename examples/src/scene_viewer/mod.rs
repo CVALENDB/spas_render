@@ -20,7 +20,7 @@ use web_time::Instant;
 use winit::{
     event::{DeviceEvent, ElementState, Event, KeyEvent, MouseButton, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
-    window::{Fullscreen, WindowBuilder},
+    window::{Fullscreen, WindowAttributes},
 };
 
 async fn load_skybox_image(loader: &rend3_framework::AssetLoader, data: &mut Vec<u8>, path: &str) {
@@ -335,9 +335,6 @@ impl Default for SceneViewer {
 }
 impl SceneViewer {
     pub fn from_args() -> Self {
-        #[cfg(feature = "tracy")]
-        tracy_client::Client::start();
-
         // Skip the first two arguments, which are the binary name and the example name.
         let mut args = Arguments::from_vec(std::env::args_os().skip(2).collect());
 
@@ -698,7 +695,7 @@ impl rend3_framework::App for SceneViewer {
 pub fn main() {
     let app = SceneViewer::from_args();
 
-    let mut builder = WindowBuilder::new().with_title("scene-viewer").with_maximized(true);
+    let mut builder = WindowAttributes::default().with_title("scene-viewer").with_maximized(true);
     if app.fullscreen {
         builder = builder.with_fullscreen(Some(Fullscreen::Borderless(None)));
     }

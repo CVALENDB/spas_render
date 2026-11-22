@@ -21,6 +21,7 @@ trait_supertrait_alias!(pub AddGraphDataAddInvoke: FnOnce(&mut GraphStorage) + W
 
 pub struct Instruction {
     pub kind: InstructionKind,
+    #[allow(dead_code)]
     pub location: Location<'static>,
 }
 

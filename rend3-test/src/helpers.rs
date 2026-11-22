@@ -12,13 +12,13 @@ pub struct CaptureDropGuard {
 }
 impl CaptureDropGuard {
     pub fn start_capture(device: Arc<Device>) -> Self {
-        device.start_capture();
+        unsafe { device.start_graphics_debugger_capture() };
         Self { device }
     }
 }
 impl Drop for CaptureDropGuard {
     fn drop(&mut self) {
-        self.device.stop_capture();
+        unsafe { self.device.stop_graphics_debugger_capture() };
         // Wait long enough for the Renderdoc UI to pick up the capture.
         std::thread::sleep(std::time::Duration::from_secs(1));
     }

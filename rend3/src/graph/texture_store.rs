@@ -6,8 +6,9 @@ use wgpu::{Device, Extent3d, Texture, TextureDescriptor, TextureDimension};
 
 use crate::{
     graph::RenderTargetCore,
-    util::typedefs::{FastBuildHasher, FastHashMap},
+    util::typedefs::{FastHashMap},
 };
+
 
 struct StoredTexture {
     inner: Arc<Texture>,
@@ -19,7 +20,7 @@ pub(crate) struct GraphTextureStore {
 }
 impl GraphTextureStore {
     pub fn new() -> Self {
-        Self { textures: FastHashMap::with_capacity_and_hasher(32, FastBuildHasher::default()) }
+        Self { textures: FastHashMap::with_capacity_and_hasher(32, rustc_hash::FxBuildHasher::default()) }
     }
 
     pub fn get_texture(&mut self, device: &Device, desc: RenderTargetCore) -> Arc<Texture> {
@@ -34,8 +35,8 @@ impl GraphTextureStore {
             mip_level_count: desc.mip_count() as u32,
             sample_count: desc.samples as _,
             dimension: TextureDimension::D2,
-            format: desc.format,
-            usage: desc.usage,
+            format : desc.format,
+            usage : desc.usage,
             view_formats: &[],
         }))
     }

@@ -55,6 +55,7 @@ fn create_mesh() -> rend3::types::Mesh {
         .unwrap()
 }
 
+#[allow(deprecated)]
 pub fn main() {
     // Setup logging
     env_logger::init();
@@ -62,9 +63,8 @@ pub fn main() {
     // Create event loop and window
     let event_loop = winit::event_loop::EventLoop::new().unwrap();
     let window = {
-        let mut builder = winit::window::WindowBuilder::new();
-        builder = builder.with_title("rend3 cube");
-        builder.build(&event_loop).expect("Could not build window")
+        let builder = winit::window::WindowAttributes::default().with_title("rend3 cube");
+        event_loop.create_window(builder).expect("Could not build window")
     };
 
     let window_size = window.inner_size();
@@ -171,8 +171,7 @@ pub fn main() {
 
     let mut resolution = glam::UVec2::new(window_size.width, window_size.height);
 
-    event_loop
-        .run(move |event, _event_loop_window_target| match event {
+    let _ = rend3_framework::run_event_loop(event_loop, move |event, _event_loop_window_target| match event {
             // Window was resized, need to resize renderer.
             winit::event::Event::WindowEvent { event: winit::event::WindowEvent::Resized(physical_size), .. } => {
                 resolution = glam::UVec2::new(physical_size.width, physical_size.height);
@@ -190,7 +189,16 @@ pub fn main() {
             // Render!
             winit::event::Event::WindowEvent { event: winit::event::WindowEvent::RedrawRequested, .. } => {
                 // Get a frame
-                let frame = surface.get_current_texture().unwrap();
+                let frame = match surface.get_current_texture() {
+                    wgpu::CurrentSurfaceTexture::Success(texture) => texture,
+                    wgpu::CurrentSurfaceTexture::Suboptimal(texture) => texture,
+                    wgpu::CurrentSurfaceTexture::Outdated
+                    | wgpu::CurrentSurfaceTexture::Timeout
+                    | wgpu::CurrentSurfaceTexture::Occluded => return,
+                    wgpu::CurrentSurfaceTexture::Lost | wgpu::CurrentSurfaceTexture::Validation => {
+                        panic!("Surface lost")
+                    }
+                };
 
                 // Swap the instruction buffers so that our frame's changes can be processed.
                 renderer.swap_instruction_buffers();
@@ -233,10 +241,9 @@ pub fn main() {
                 graph.execute(&renderer, &mut eval_output);
 
                 // Present the frame
-                frame.present();
+                renderer.queue.present(frame);
             }
             // Other events we don't care about
             _ => {}
-        })
-        .expect("");
+        });
 }

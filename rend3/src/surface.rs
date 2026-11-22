@@ -1,6 +1,6 @@
 use glam::UVec2;
 use rend3_types::{TextureFormat, TextureUsages};
-use wgpu::{CompositeAlphaMode, Device, SurfaceConfiguration};
+use wgpu::{CompositeAlphaMode, Device, SurfaceColorSpace, SurfaceConfiguration};
 
 use crate::types::{PresentMode, Surface};
 
@@ -17,6 +17,7 @@ pub fn configure_surface(
         &SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format,
+            color_space: SurfaceColorSpace::Auto,
             width: size.x,
             height: size.y,
             present_mode,

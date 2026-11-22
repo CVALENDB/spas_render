@@ -1,8 +1,5 @@
 use rend3::util::bind_merge::{BindGroupBuilder, BindGroupLayoutBuilder};
-use wgpu::{
-    AddressMode, BindingType, CompareFunction, Device, FilterMode, Sampler, SamplerBindingType, SamplerDescriptor,
-    ShaderStages,
-};
+use wgpu::{AddressMode, BindingType, CompareFunction, Device, FilterMode, MipmapFilterMode, Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages};
 
 /// Container holding a variety of samplers.
 pub struct Samplers {
@@ -47,7 +44,7 @@ fn create_sampler(device: &Device, filter: FilterMode, compare: Option<CompareFu
         address_mode_w: AddressMode::Repeat,
         mag_filter: filter,
         min_filter: filter,
-        mipmap_filter: filter,
+        mipmap_filter: MipmapFilterMode::Linear,
         lod_min_clamp: 0.0,
         lod_max_clamp: 100.0,
         compare,

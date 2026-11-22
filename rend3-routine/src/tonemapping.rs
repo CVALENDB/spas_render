@@ -17,12 +17,7 @@ use rend3::{
     util::bind_merge::{BindGroupBuilder, BindGroupLayoutBuilder},
     Renderer, ShaderConfig, ShaderPreProcessor,
 };
-use wgpu::{
-    BindGroup, BindGroupLayout, BindingType, ColorTargetState, ColorWrites, Device, FragmentState, FrontFace,
-    MultisampleState, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline,
-    RenderPipelineDescriptor, ShaderModuleDescriptor, ShaderSource, ShaderStages, TextureFormat, TextureSampleType,
-    TextureViewDimension, VertexState,
-};
+use wgpu::{BindGroup, BindGroupLayout, BindingType, ColorTargetState, ColorWrites, Device, FragmentState, FrontFace, MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor, ShaderSource, ShaderStages, TextureFormat, TextureSampleType, TextureViewDimension, VertexState};
 
 use crate::common::WholeFrameInterfaces;
 
@@ -45,14 +40,16 @@ fn create_pipeline(
 
     let pll = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("tonemapping pass"),
-        bind_group_layouts: &[&interfaces.forward_uniform_bgl, bgl],
-        push_constant_ranges: &[],
+        bind_group_layouts: &[Some(&interfaces.forward_uniform_bgl), Some(bgl)],
+        immediate_size : 0
     });
 
     device.create_render_pipeline(&RenderPipelineDescriptor {
+        multiview_mask : None,
+        cache : None,
         label: Some("tonemapping pass"),
         layout: Some(&pll),
-        vertex: VertexState { module: &module, entry_point: "vs_main", buffers: &[] },
+        vertex: VertexState { module: &module, entry_point: Some("vs_main"), buffers: &[] , compilation_options : PipelineCompilationOptions::default()},
         primitive: PrimitiveState {
             topology: PrimitiveTopology::TriangleList,
             strip_index_format: None,
@@ -65,11 +62,11 @@ fn create_pipeline(
         depth_stencil: None,
         multisample: MultisampleState::default(),
         fragment: Some(FragmentState {
+            compilation_options : PipelineCompilationOptions::default(),
             module: &module,
-            entry_point: fs_entry_point,
+            entry_point: Option::from(fs_entry_point),
             targets: &[Some(ColorTargetState { format: output_format, blend: None, write_mask: ColorWrites::all() })],
         }),
-        multiview: None,
     })
 }
 
@@ -141,7 +138,7 @@ impl TonemappingRoutine {
 
             rpass.set_pipeline(&self.pipeline);
             rpass.set_bind_group(0, forward_uniform_bg, &[]);
-            rpass.set_bind_group(1, blit_src_bg, &[]);
+            rpass.set_bind_group(1, Some(&*blit_src_bg), &[]);
             rpass.draw(0..3, 0..1);
         });
     }

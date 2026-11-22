@@ -459,8 +459,7 @@ impl<'node> RenderGraph<'node> {
 
                 let profiler_query = data_core.profiler.try_lock().unwrap().begin_query(
                     node.label,
-                    &mut encoder_or_rpass,
-                    &renderer.device,
+                    &mut encoder_or_rpass
                 );
 
                 let ctx = NodeExecutionContext {
@@ -551,6 +550,7 @@ impl<'node> RenderGraph<'node> {
                 let store = if view_span.last_reference == Some(pass_end_idx) { StoreOp::Discard } else { StoreOp::Store };
 
                 RenderPassColorAttachment {
+                    depth_slice : None,
                     view: match target.color.resource {
                         GraphSubResource::ImportedTexture(region) => &active_imported_views[&region],
                         GraphSubResource::Texture(region) => &active_views[&region],
@@ -612,6 +612,7 @@ impl<'node> RenderGraph<'node> {
             }
         });
         encoder.begin_render_pass(&RenderPassDescriptor {
+            multiview_mask : None,
             label: None,
             color_attachments: &color_attachments,
             depth_stencil_attachment,

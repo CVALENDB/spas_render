@@ -8,12 +8,7 @@ use rend3::{
     util::bind_merge::{BindGroupBuilder, BindGroupLayoutBuilder},
     Renderer, ShaderConfig, ShaderPreProcessor,
 };
-use wgpu::{
-    BindGroup, BindGroupLayout, BindingType, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
-    DepthStencilState, Face, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor, PolygonMode,
-    PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor, ShaderSource,
-    ShaderStages, StencilState, TextureFormat, TextureSampleType, TextureViewDimension, VertexState,
-};
+use wgpu::{BindGroup, BindGroupLayout, BindingType, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, Face, FragmentState, FrontFace, MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor, ShaderSource, ShaderStages, StencilState, TextureFormat, TextureSampleType, TextureViewDimension, VertexState};
 
 use crate::common::WholeFrameInterfaces;
 
@@ -132,15 +127,17 @@ impl SkyboxPipelines {
 
         let pll = renderer.device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("skybox pass"),
-            bind_group_layouts: &[&interfaces.forward_uniform_bgl, bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&interfaces.forward_uniform_bgl), Some(bgl)],
+            immediate_size : 0
         });
 
         let inner = |samples| {
             renderer.device.create_render_pipeline(&RenderPipelineDescriptor {
+                cache : None,
+                multiview_mask : None,
                 label: Some("skybox pass"),
                 layout: Some(&pll),
-                vertex: VertexState { module: &skybox_sm, entry_point: "vs_main", buffers: &[] },
+                vertex: VertexState { module: &skybox_sm, entry_point: Some("vs_main"), buffers: &[], compilation_options : PipelineCompilationOptions::default()},
                 primitive: PrimitiveState {
                     topology: PrimitiveTopology::TriangleList,
                     strip_index_format: None,
@@ -152,22 +149,22 @@ impl SkyboxPipelines {
                 },
                 depth_stencil: Some(DepthStencilState {
                     format: TextureFormat::Depth32Float,
-                    depth_write_enabled: true,
-                    depth_compare: CompareFunction::GreaterEqual,
+                    depth_write_enabled: Some(true),
+                    depth_compare: Some(CompareFunction::GreaterEqual),
                     stencil: StencilState::default(),
                     bias: DepthBiasState::default(),
                 }),
                 multisample: MultisampleState { count: samples as u32, ..Default::default() },
                 fragment: Some(FragmentState {
+                    compilation_options : PipelineCompilationOptions::default(),
                     module: &skybox_sm,
-                    entry_point: "fs_main",
+                    entry_point: Some("fs_main"),
                     targets: &[Some(ColorTargetState {
                         format: TextureFormat::Rgba16Float,
                         blend: None,
                         write_mask: ColorWrites::all(),
                     })],
                 }),
-                multiview: None,
             })
         };
 

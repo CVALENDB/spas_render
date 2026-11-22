@@ -62,9 +62,10 @@ where
         let size = data.size();
         self.ensure_size(device, size.get());
 
-        let mut mapped = queue.write_buffer_with(&self.inner, 0, size).unwrap();
-        encase::StorageBuffer::new(&mut *mapped).write(data).unwrap();
-        drop(mapped);
+        let mut bytes = encase::StorageBuffer::new(Vec::<u8>::new());
+        bytes.write(data).unwrap();
+
+        queue.write_buffer(&self.inner, 0, bytes.as_ref());
     }
 }
 

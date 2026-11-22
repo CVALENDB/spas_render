@@ -108,8 +108,10 @@ pub fn add_to_graph<'node>(
             usage: BufferUsages::UNIFORM,
             mapped_at_creation: true,
         });
-        let mut mapping = uniform_buffer.slice(..).get_mapped_range_mut();
-        UniformBuffer::new(&mut *mapping).write(&uniforms).unwrap();
+        let mut staging = vec![0u8; FrameUniforms::SHADER_SIZE.get() as usize];
+        UniformBuffer::new(&mut staging).write(&uniforms).unwrap();
+        let mut mapping = uniform_buffer.slice(..).get_mapped_range_mut().unwrap();
+        mapping.copy_from_slice(&staging);
         drop(mapping);
         uniform_buffer.unmap();
 

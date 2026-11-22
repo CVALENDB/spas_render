@@ -1,6 +1,6 @@
 #![cfg_attr(target_arch = "wasm32", allow(clippy::arc_with_non_send_sync))]
 
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{future::Future, marker::PhantomData, pin::Pin, sync::Arc};
 
 use glam::UVec2;
 use rend3::{
@@ -8,12 +8,13 @@ use rend3::{
     InstanceAdapterDevice, Renderer, ShaderPreProcessor,
 };
 use rend3_routine::base::BaseRenderGraph;
-use wgpu::{Instance, PresentMode, SurfaceError};
+use wgpu::{CurrentSurfaceTexture, Instance, PresentMode};
 use winit::{
+    application::ApplicationHandler,
     error::EventLoopError,
-    event::Event,
-    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
-    window::{Window, WindowBuilder},
+    event::{DeviceEvent, DeviceId, Event, StartCause, WindowEvent},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::{Window, WindowAttributes, WindowId},
 };
 
 mod assets;
@@ -47,7 +48,8 @@ pub struct EventContext<'a, T: 'static = ()> {
     pub base_rendergraph: &'a BaseRenderGraph,
     pub resolution: UVec2,
     pub control_flow: &'a mut dyn FnMut(winit::event_loop::ControlFlow),
-    pub event_loop_window_target: &'a EventLoopWindowTarget<T>,
+    pub event_loop_window_target: &'a ActiveEventLoop,
+    pub marker: PhantomData<fn() -> T>,
 }
 
 pub struct RedrawContext<'a, T: 'static = ()> {
@@ -58,8 +60,9 @@ pub struct RedrawContext<'a, T: 'static = ()> {
     pub surface_texture: &'a wgpu::Texture,
     pub resolution: UVec2,
     pub control_flow: &'a mut dyn FnMut(winit::event_loop::ControlFlow),
-    pub event_loop_window_target: Option<&'a EventLoopWindowTarget<T>>,
+    pub event_loop_window_target: Option<&'a ActiveEventLoop>,
     pub delta_t_seconds: f32,
+    pub marker: PhantomData<fn() -> T>,
 }
 
 pub trait App<T: 'static = ()> {
@@ -84,11 +87,13 @@ pub trait App<T: 'static = ()> {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     }
 
-    fn create_window(&mut self, builder: WindowBuilder) -> Result<(EventLoop<T>, Window), EventLoopError> {
+    #[allow(deprecated)]
+    fn create_window(&mut self, mut builder: WindowAttributes) -> Result<(EventLoop<T>, Window), EventLoopError> {
         profiling::scope!("creating window");
 
-        let event_loop = EventLoopBuilder::with_user_event().build()?;
-        let window = builder.build(&event_loop).expect("Could not build window");
+        let event_loop = EventLoop::<T>::with_user_event().build()?;
+        builder.visible = false;
+        let window = event_loop.create_window(builder)?;
 
         #[cfg(target_arch = "wasm32")]
         {
@@ -174,12 +179,63 @@ pub struct DefaultRoutines {
     pub tonemapping: Mutex<rend3_routine::tonemapping::TonemappingRoutine>,
 }
 
-pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_builder: WindowBuilder) {
+struct ClosureApp<T, F> {
+    handler: F,
+    marker: PhantomData<T>,
+}
+
+impl<T: 'static, F: FnMut(Event<T>, &ActiveEventLoop)> ApplicationHandler<T> for ClosureApp<T, F> {
+    fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
+        (self.handler)(Event::NewEvents(cause), event_loop)
+    }
+
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        (self.handler)(Event::Resumed, event_loop)
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+        (self.handler)(Event::WindowEvent { window_id, event }, event_loop)
+    }
+
+    fn device_event(&mut self, event_loop: &ActiveEventLoop, device_id: DeviceId, event: DeviceEvent) {
+        (self.handler)(Event::DeviceEvent { device_id, event }, event_loop)
+    }
+
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: T) {
+        (self.handler)(Event::UserEvent(event), event_loop)
+    }
+
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        (self.handler)(Event::Suspended, event_loop)
+    }
+
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        (self.handler)(Event::AboutToWait, event_loop)
+    }
+
+    fn exiting(&mut self, event_loop: &ActiveEventLoop) {
+        (self.handler)(Event::LoopExiting, event_loop)
+    }
+
+    fn memory_warning(&mut self, event_loop: &ActiveEventLoop) {
+        (self.handler)(Event::MemoryWarning, event_loop)
+    }
+}
+
+pub fn run_event_loop<T: 'static, F: FnMut(Event<T>, &ActiveEventLoop)>(
+    event_loop: EventLoop<T>,
+    handler: F,
+) -> Result<(), EventLoopError> {
+    let mut app = ClosureApp { handler, marker: PhantomData };
+    event_loop.run_app(&mut app)
+}
+
+pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_attributes: WindowAttributes) {
     app.register_logger();
     app.register_panic_hook();
 
     // Create the window invisible until we are rendering
-    let (event_loop, window) = app.create_window(window_builder.with_visible(false)).unwrap();
+    let (event_loop, window) = app.create_window(window_attributes).unwrap();
     let window = Arc::new(window);
     let window_size = window.inner_size();
 
@@ -269,7 +325,7 @@ pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_bui
             use winit::platform::web::EventLoopExtWebSys;
             let event_loop_function = EventLoop::spawn;
         } else {
-            let event_loop_function = EventLoop::run;
+            let event_loop_function = run_event_loop;
         }
     }
 
@@ -279,7 +335,7 @@ pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_bui
     #[allow(clippy::let_unit_value)]
     let _ = (event_loop_function)(
         event_loop,
-        move |event: Event<T>, event_loop_window_target: &EventLoopWindowTarget<T>| {
+        move |event: Event<T>, event_loop_window_target: &ActiveEventLoop| {
             let mut control_flow = event_loop_window_target.control_flow();
             if let Some(suspend) =
                 handle_surface(&app, &window, &event, &iad.instance, &mut surface, &renderer, &mut stored_surface_info)
@@ -326,15 +382,17 @@ pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_bui
                 }
 
                 let surface_texture = match surface.get_current_texture() {
-                    Ok(texture) => texture,
-                    Err(SurfaceError::Outdated) => {
+                    CurrentSurfaceTexture::Success(texture) => texture,
+                    CurrentSurfaceTexture::Suboptimal(texture) => {
+                        stored_surface_info.requires_reconfigure = true;
+                        texture
+                    }
+                    CurrentSurfaceTexture::Outdated => {
                         stored_surface_info.requires_reconfigure = true;
                         return;
                     }
-                    Err(SurfaceError::Timeout) => {
-                        return;
-                    }
-                    Err(SurfaceError::OutOfMemory | SurfaceError::Lost) => panic!("Surface OOM"),
+                    CurrentSurfaceTexture::Timeout | CurrentSurfaceTexture::Occluded => return,
+                    CurrentSurfaceTexture::Lost | CurrentSurfaceTexture::Validation => panic!("Surface lost"),
                 };
 
                 let current_time = web_time::Instant::now();
@@ -354,9 +412,10 @@ pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_bui
                     },
                     event_loop_window_target: Some(event_loop_window_target),
                     delta_t_seconds,
+                    marker: PhantomData,
                 });
 
-                surface_texture.present();
+                renderer.queue.present(surface_texture);
 
                 app.handle_redraw_done(&window); // standard action is to redraw, but that can be overridden.
             } else {
@@ -372,10 +431,13 @@ pub async fn async_start<A: App<T> + 'static, T: 'static>(mut app: A, window_bui
                             last_user_control_mode = c;
                         },
                         event_loop_window_target,
+                        marker: PhantomData,
                     },
                     event,
                 );
             }
+
+            event_loop_window_target.set_control_flow(control_flow);
         },
     );
 }
@@ -431,14 +493,14 @@ fn handle_surface<A: App<T>, T: 'static>(
     }
 }
 
-pub fn start<A: App<T> + 'static, T: 'static>(app: A, window_builder: WindowBuilder) {
+pub fn start<A: App<T> + 'static, T: 'static>(app: A, window_attributes: WindowAttributes) {
     #[cfg(target_arch = "wasm32")]
     {
-        wasm_bindgen_futures::spawn_local(async_start(app, window_builder));
+        wasm_bindgen_futures::spawn_local(async_start(app, window_attributes));
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        pollster::block_on(async_start(app, window_builder));
+        pollster::block_on(async_start(app, window_attributes));
     }
 }

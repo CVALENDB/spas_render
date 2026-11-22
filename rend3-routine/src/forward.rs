@@ -17,14 +17,15 @@ use rend3::{
 use serde::Serialize;
 use wgpu::{
     BindGroup, BindGroupLayout, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState,
-    FragmentState, IndexFormat, MultisampleState, PipelineLayoutDescriptor, PolygonMode, PrimitiveState,
-    PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule, StencilState, TextureFormat,
-    VertexState,
+    FragmentState, IndexFormat, MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode,
+    PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule, StencilState,
+    TextureFormat, VertexState,
 };
 
 use crate::common::{CameraSpecifier, PerMaterialArchetypeInterface, WholeFrameInterfaces};
 use crate::uniforms::PerCameraUniform;
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 struct ForwardPreprocessingArguments {
     profile: Option<RendererProfile>,
@@ -129,10 +130,12 @@ impl<M: Material> ForwardRoutine<M> {
         }
         bgls.extend(args.extra_bgls.iter().copied());
 
+        let bind_group_layouts = bgls.as_slice().iter().map(|i| Some(*i)).collect::<Vec<_>>();
+
         let pll = args.renderer.device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some(args.name),
-            bind_group_layouts: &bgls,
-            push_constant_ranges: &[],
+            bind_group_layouts: &bind_group_layouts,
+            immediate_size : 0
         });
 
         Self {
@@ -182,8 +185,12 @@ impl<M: Material> ForwardRoutine<M> {
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: true,
             }));
-            let mut mapping = per_camera_uniform_buffer.slice(..).get_mapped_range_mut();
-            StorageBuffer::new(&mut *mapping).write(&per_camera_uniform_values).unwrap();
+
+            let mut staging = vec![0u8; PerCameraUniform::SHADER_SIZE.get() as usize];
+            StorageBuffer::new(&mut staging).write(&per_camera_uniform_values).unwrap();
+
+            let mut mapping = per_camera_uniform_buffer.slice(..).get_mapped_range_mut().unwrap();
+            mapping.copy_from_slice(&staging);
             drop(mapping);
             per_camera_uniform_buffer.unmap();
 
@@ -209,7 +216,7 @@ impl<M: Material> ForwardRoutine<M> {
                 }
             }
             if let ProfileData::Gpu(ref bg) = ctx.eval_output.d2_texture.bg {
-                rpass.set_bind_group(2, bg, &[]);
+                rpass.set_bind_group(2, Some(&**bg), &[]);
             }
 
             for (idx, object) in objects.into_iter() {
@@ -223,7 +230,7 @@ impl<M: Material> ForwardRoutine<M> {
                     let texture_bind_group = material.bind_group_index.into_cpu();
                     rpass.set_bind_group(2, ctx.data_core.material_manager.texture_bind_group(texture_bind_group), &[]);
                 }
-                rpass.set_bind_group(1, per_material_bg, &[]);
+                rpass.set_bind_group(1, Some(&*per_material_bg), &[]);
                 rpass.draw_indexed(
                     object.inner.first_index..object.inner.first_index + object.inner.index_count,
                     0,
@@ -348,7 +355,12 @@ fn build_forward_pipeline_inner<M: Material>(
     let mut desc = RenderPipelineDescriptor {
         label: Some(args.name),
         layout: Some(pll),
-        vertex: VertexState { module: args.shaders.vs_module, entry_point: args.shaders.vs_entry, buffers: &[] },
+        vertex: VertexState {
+            module: args.shaders.vs_module,
+            entry_point: Some(args.shaders.vs_entry),
+            compilation_options: PipelineCompilationOptions::default(),
+            buffers: &[],
+        },
         primitive: PrimitiveState {
             topology: PrimitiveTopology::TriangleList,
             strip_index_format: None,
@@ -363,8 +375,8 @@ fn build_forward_pipeline_inner<M: Material>(
         },
         depth_stencil: Some(DepthStencilState {
             format: TextureFormat::Depth32Float,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::GreaterEqual,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(CompareFunction::GreaterEqual),
             stencil: StencilState::default(),
             bias: match args.routine_type {
                 // TODO: figure out what to put here
@@ -375,10 +387,12 @@ fn build_forward_pipeline_inner<M: Material>(
         multisample: MultisampleState { count: samples as u32, ..Default::default() },
         fragment: Some(FragmentState {
             module: args.shaders.fs_module,
-            entry_point: args.shaders.fs_entry,
+            entry_point: Some(args.shaders.fs_entry),
+            compilation_options: PipelineCompilationOptions::default(),
             targets: &[],
         }),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     };
     if let Some(desc_callback) = args.descriptor_callback {
         desc_callback(&mut desc, &mut render_targets);

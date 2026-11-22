@@ -3,8 +3,22 @@
 use std::sync::Arc;
 
 use wgpu::{
-    Adapter, AdapterInfo, Backend, Backends, BufferAddress, Device, DeviceDescriptor, DeviceType, Features,
-    Gles3MinorVersion, Instance, InstanceFlags, Limits, Queue,
+    Adapter,
+    AdapterInfo,
+    Backend,
+    Backends,
+    BufferAddress,
+    Device,
+    DeviceDescriptor,
+    DeviceType,
+    ExperimentalFeatures,
+    Features,
+    Instance,
+    InstanceFlags,
+    Limits,
+    MemoryHints,
+    Queue,
+    Trace
 };
 
 #[allow(unused_imports)]
@@ -18,33 +32,23 @@ use crate::{
 pub const MAX_UNIFORM_BUFFER_BINDING_SIZE: BufferAddress = 1024;
 
 /// Features required to run in the GpuDriven profile.
-pub const GPU_DRIVEN_REQUIRED_FEATURES: Features = {
-    // We need to do this whole bits thing to make this const as OpOr isn't const
-    Features::from_bits_truncate(
-        Features::PUSH_CONSTANTS.bits()
-            | Features::TEXTURE_COMPRESSION_BC.bits()
-            | Features::DEPTH_CLIP_CONTROL.bits()
-            | Features::TEXTURE_BINDING_ARRAY.bits()
-            | Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING.bits()
-            | Features::PARTIALLY_BOUND_BINDING_ARRAY.bits()
-            | Features::MULTI_DRAW_INDIRECT.bits()
-            | Features::MULTI_DRAW_INDIRECT_COUNT.bits()
-            | Features::SPIRV_SHADER_PASSTHROUGH.bits(),
-    )
-};
+pub const GPU_DRIVEN_REQUIRED_FEATURES: Features = Features::TEXTURE_COMPRESSION_BC
+    .union(Features::DEPTH_CLIP_CONTROL)
+    .union(Features::TEXTURE_BINDING_ARRAY)
+    .union(Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING)
+    .union(Features::PARTIALLY_BOUND_BINDING_ARRAY)
+    .union(Features::MULTI_DRAW_INDIRECT_COUNT);
 
 /// Features required to run in the GpuDriven profile.
-pub const CPU_DRIVEN_REQUIRED_FEATURES: Features = Features::from_bits_truncate(0);
+pub const CPU_DRIVEN_REQUIRED_FEATURES: Features = Features::empty();
 
 /// Features that rend3 can use if it they are available, but we don't require.
-pub const OPTIONAL_FEATURES: Features = Features::from_bits_truncate(
-    Features::DEPTH_CLIP_CONTROL.bits()
-        | Features::TEXTURE_COMPRESSION_BC.bits()
-        | Features::TEXTURE_COMPRESSION_ETC2.bits()
-        | Features::TEXTURE_COMPRESSION_ASTC.bits()
-        | Features::TIMESTAMP_QUERY.bits()
-        | Features::TIMESTAMP_QUERY_INSIDE_PASSES.bits(),
-);
+pub const OPTIONAL_FEATURES: Features = Features::DEPTH_CLIP_CONTROL
+    .union(Features::DEPTH_CLIP_CONTROL)
+    .union(Features::TEXTURE_COMPRESSION_BC)
+    .union(Features::TEXTURE_COMPRESSION_ETC2)
+    .union(Features::TIMESTAMP_QUERY)
+    .union(Features::TIMESTAMP_QUERY_INSIDE_PASSES);
 
 /// Check that all required features for a given profile are present in the feature
 /// set given.
@@ -78,16 +82,14 @@ pub const GPU_REQUIRED_LIMITS: Limits = Limits {
     max_storage_buffers_per_shader_stage: 5,
     max_storage_textures_per_shader_stage: 0,
     max_uniform_buffers_per_shader_stage: 2,
-    max_uniform_buffer_binding_size: MAX_UNIFORM_BUFFER_BINDING_SIZE as u32,
+    max_uniform_buffer_binding_size: MAX_UNIFORM_BUFFER_BINDING_SIZE as u64,
     max_storage_buffer_binding_size: 128 << 20,
     max_vertex_buffer_array_stride: 128,
     max_vertex_buffers: 7,
     max_vertex_attributes: 7,
     max_bindings_per_bind_group: 640,
-    max_push_constant_size: 128,
     min_uniform_buffer_offset_alignment: 256,
     min_storage_buffer_offset_alignment: 256,
-    max_inter_stage_shader_components: 60,
     max_compute_workgroup_storage_size: 16352,
     max_compute_invocations_per_workgroup: 256,
     max_compute_workgroup_size_x: 256,
@@ -96,6 +98,7 @@ pub const GPU_REQUIRED_LIMITS: Limits = Limits {
     max_compute_workgroups_per_dimension: 65535,
     max_buffer_size: 8192 * 8 * 18,
     max_non_sampler_bindings: 1_000_000,
+    ..Limits::downlevel_defaults()
 };
 
 /// Limits required to run in the CpuDriven profile.
@@ -112,16 +115,14 @@ pub const CPU_REQUIRED_LIMITS: Limits = Limits {
     max_storage_buffers_per_shader_stage: 2,
     max_storage_textures_per_shader_stage: 0,
     max_uniform_buffers_per_shader_stage: 2,
-    max_uniform_buffer_binding_size: MAX_UNIFORM_BUFFER_BINDING_SIZE as u32,
+    max_uniform_buffer_binding_size: MAX_UNIFORM_BUFFER_BINDING_SIZE as u64,
     max_storage_buffer_binding_size: 128 << 20,
     max_vertex_buffers: 6,
     max_vertex_attributes: 6,
     max_bindings_per_bind_group: 640,
     max_vertex_buffer_array_stride: 128,
-    max_push_constant_size: 0,
     min_uniform_buffer_offset_alignment: 256,
     min_storage_buffer_offset_alignment: 256,
-    max_inter_stage_shader_components: 60,
     max_compute_workgroup_storage_size: 16352,
     max_compute_invocations_per_workgroup: 256,
     max_compute_workgroup_size_x: 256,
@@ -130,6 +131,7 @@ pub const CPU_REQUIRED_LIMITS: Limits = Limits {
     max_compute_workgroups_per_dimension: 65535,
     max_buffer_size: 8192 * 8 * 8,
     max_non_sampler_bindings: 1_000_000,
+    ..Limits::downlevel_defaults()
 };
 
 fn check_limit_unlimited<LimitValue: Into<u64> + Ord>(
@@ -255,11 +257,6 @@ pub fn check_limits(profile: RendererProfile, device_limits: &Limits) -> Result<
             required_limits.max_vertex_buffer_array_stride,
             LimitType::MaxVertexBufferArrayStride,
         )?,
-        max_push_constant_size: check_limit_unlimited(
-            device_limits.max_push_constant_size,
-            required_limits.max_push_constant_size,
-            LimitType::PushConstantSize,
-        )?,
         min_storage_buffer_offset_alignment: check_limit_low(
             device_limits.min_storage_buffer_offset_alignment,
             required_limits.min_storage_buffer_offset_alignment,
@@ -269,11 +266,6 @@ pub fn check_limits(profile: RendererProfile, device_limits: &Limits) -> Result<
             device_limits.min_uniform_buffer_offset_alignment,
             required_limits.min_uniform_buffer_offset_alignment,
             LimitType::UniformBufferBindingAlignment,
-        )?,
-        max_inter_stage_shader_components: check_limit_unlimited(
-            device_limits.max_inter_stage_shader_components,
-            required_limits.max_inter_stage_shader_components,
-            LimitType::MaxInterStageShaderComponents,
         )?,
         max_compute_workgroup_storage_size: check_limit_unlimited(
             device_limits.max_compute_workgroup_storage_size,
@@ -311,6 +303,7 @@ pub fn check_limits(profile: RendererProfile, device_limits: &Limits) -> Result<
             LimitType::MaxBufferSize,
         )?,
         max_non_sampler_bindings: 1_000_000,
+        ..required_limits
     })
 }
 
@@ -435,19 +428,22 @@ pub async fn create_iad(
     #[cfg(target_arch = "wasm32")]
     let default_backend_order = [Backend::BrowserWebGpu];
 
+
     let instance = Instance::new(wgpu::InstanceDescriptor {
         backends: backend_bits,
-        dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
-        gles_minor_version: Gles3MinorVersion::default(),
-        flags: InstanceFlags::default(),
+        backend_options : wgpu::BackendOptions::default(),
+        display : None,
+        flags : InstanceFlags::default(),
+        memory_budget_thresholds : wgpu::MemoryBudgetThresholds::default()
     });
+
 
     let mut valid_adapters = FastHashMap::<Backend, Vec<PotentialAdapter<Adapter>>>::default();
 
     for backend in &default_backend_order {
         profiling::scope!("enumerating backend");
         #[cfg(not(target_arch = "wasm32"))]
-        let adapters = instance.enumerate_adapters(Backends::from(*backend));
+        let adapters = instance.enumerate_adapters(Backends::from(*backend)).await;
         #[cfg(target_arch = "wasm32")]
         let adapters = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -518,8 +514,10 @@ pub async fn create_iad(
                         label: None,
                         required_features: adapter.features.union(additional_features.unwrap_or_else(Features::empty)),
                         required_limits: adapter.limits,
+                        experimental_features : ExperimentalFeatures::default(),
+                        memory_hints : MemoryHints::Performance,
+                        trace : Trace::Off
                     },
-                    None,
                 )
                 .await
                 .map_err(|_| RendererInitializationError::RequestDeviceFailed)?;

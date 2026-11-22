@@ -1,10 +1,7 @@
 use std::num::NonZeroU64;
 
 use encase::{private::WriteInto, ShaderSize};
-use wgpu::{
-    BindGroupLayout, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoder,
-    ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, Device, PipelineLayoutDescriptor, ShaderStages,
-};
+use wgpu::{BindGroupLayout, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoder, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, Device, PipelineCompilationOptions, PipelineLayoutDescriptor, ShaderStages};
 
 use crate::util::{
     bind_merge::{BindGroupBuilder, BindGroupLayoutBuilder},
@@ -52,15 +49,17 @@ impl ScatterCopy {
 
         let pll = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("ScatterCopy pll"),
-            bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bgl)],
+            immediate_size: 0,
         });
 
         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some("ScatterCopy compute pipeline"),
             layout: Some(&pll),
             module: &sm,
-            entry_point: "cs_main",
+            entry_point: Option::from("cs_main"),
+            cache : None,
+            compilation_options : PipelineCompilationOptions::default()
         });
 
         Self { pipeline, bgl }
@@ -95,29 +94,35 @@ impl ScatterCopy {
             usage: BufferUsages::STORAGE,
             mapped_at_creation: true,
         });
-        let mut mapped_range = source_buffer.slice(..).get_mapped_range_mut();
-        let mapped_slice: &mut [u32] = bytemuck::cast_slice_mut(&mut mapped_range);
+        let mut mapped_range = source_buffer
+            .slice(..)
+            .get_mapped_range_mut()
+            .expect("failed to get mapped range of scatter copy source buffer");
+
+
+        let mut staging = vec![0u32; mapped_range.len() / 4];
+
 
         let count_u32: u32 = count.try_into().unwrap();
-        mapped_slice[0] = size_of_t_u32 / 4;
-        mapped_slice[1] = count_u32;
+        staging[0] = size_of_t_u32 / 4;
+        staging[1] = count_u32;
 
         for (idx, item) in data_iterator.enumerate() {
             // Add two words for the header.
             let range_start = idx * stride_words + 2;
             let range_end = range_start + stride_words;
 
-            mapped_slice[range_start] = item.word_offset;
-            let mut writer = encase::internal::Writer::new(
-                &item.data,
-                bytemuck::cast_slice_mut(&mut mapped_slice[range_start + 1..range_end]),
-                0,
-            )
-            .unwrap();
+            staging[range_start] = item.word_offset;
+            
+            let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut staging[range_start + 1..range_end]);
+            let mut writer = encase::internal::Writer::new(&item.data, dst, 0).unwrap();
             item.data.write_into(&mut writer);
         }
 
+        mapped_range.copy_from_slice(bytemuck::cast_slice(&staging));
+
         drop(mapped_range);
+
         source_buffer.unmap();
 
         let bg = BindGroupBuilder::new().append_buffer(&source_buffer).append_buffer(destination_buffer).build(
@@ -137,6 +142,7 @@ impl ScatterCopy {
 
 #[cfg(test)]
 mod test {
+    use wgpu::{ExperimentalFeatures, MemoryHints, Trace};
     use wgpu::util::DeviceExt;
 
     use crate::util::scatter_copy::{ScatterCopy, ScatterData};
@@ -147,22 +153,25 @@ mod test {
     }
 
     impl TestContext {
-        fn new() -> Option<Self> {
-            let backends = wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::all());
+        fn new() -> Result<Self, Box<dyn std::error::Error>> {
+
+            let backends = wgpu::Backends::all();
             let instance =
-                wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..wgpu::InstanceDescriptor::default() });
+                wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..wgpu::InstanceDescriptor::new_without_display_handle() });
             let adapter = pollster::block_on(wgpu::util::initialize_adapter_from_env_or_default(&instance, None))?;
             let (device, queue) = pollster::block_on(adapter.request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
-                },
-                None,
+                    trace : Trace::Off,
+                    memory_hints : MemoryHints::Performance,
+                    experimental_features : ExperimentalFeatures::default()
+                }
             ))
-            .ok()?;
+            .or_else(|_| Err("Failed to create device"))?;
 
-            Some(Self { device, queue })
+            Ok(Self { device, queue })
         }
 
         fn buffer<T: bytemuck::Pod>(&self, data: &[T]) -> wgpu::Buffer {
@@ -195,19 +204,26 @@ mod test {
             self.queue.submit(Some(encoder.finish()));
 
             staging.slice(..).map_async(wgpu::MapMode::Read, |_| ());
-            self.device.poll(wgpu::Maintain::Wait);
 
-            let res = bytemuck::cast_slice(&staging.slice(..).get_mapped_range()).to_vec();
+            self.device.poll(wgpu::wgt::PollType::Wait { submission_index: None, timeout: None }).expect("error to wait device poll");
 
+
+            let view = staging
+                .slice(..)
+                .get_mapped_range()
+                .expect("failed to get mapped range of readback buffer");
+
+            let res = bytemuck::cast_slice(&view).to_vec();
+
+            drop(view);
             res
         }
     }
 
     #[test]
     fn single_word() {
-        let Some(ctx) = TestContext::new() else {
-            return;
-        };
+
+        let ctx = TestContext::new().expect("Failed to create test context");
 
         let scatter = ScatterCopy::new(&ctx.device);
 
@@ -222,9 +238,8 @@ mod test {
 
     #[test]
     fn sparse_words() {
-        let Some(ctx) = TestContext::new() else {
-            return;
-        };
+
+        let ctx = TestContext::new().expect("Failed to create test context");
 
         let scatter = ScatterCopy::new(&ctx.device);
 
@@ -244,9 +259,8 @@ mod test {
 
     #[test]
     fn sparse_multi_words() {
-        let Some(ctx) = TestContext::new() else {
-            return;
-        };
+
+        let ctx = TestContext::new().expect("Failed to create test context");
 
         let scatter = ScatterCopy::new(&ctx.device);
 

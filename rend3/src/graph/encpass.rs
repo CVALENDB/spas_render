@@ -22,11 +22,11 @@ impl<'a, 'pass> ProfilerCommandRecorder for RenderGraphEncoderOrPassInner<'a, 'p
     }
 
     fn write_timestamp(&mut self, query_set: &wgpu::QuerySet, query_index: u32) {
-        match self {
-            RenderGraphEncoderOrPassInner::Encoder(e) => e.write_timestamp(query_set, query_index),
-            RenderGraphEncoderOrPassInner::RenderPass(rp) => rp.write_timestamp(query_set, query_index),
-            RenderGraphEncoderOrPassInner::None => panic!("Already removed the contents of RenderGraphEncoderOrPass"),
-        }
+            match self {
+                RenderGraphEncoderOrPassInner::Encoder(e) => e.write_timestamp(query_set, query_index),
+                RenderGraphEncoderOrPassInner::RenderPass(rp) => rp.write_timestamp(query_set, query_index),
+                RenderGraphEncoderOrPassInner::None => panic!("Already removed the contents of RenderGraphEncoderOrPass"),
+            }
     }
 
     fn push_debug_group(&mut self, label: &str) {

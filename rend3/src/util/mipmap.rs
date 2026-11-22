@@ -4,14 +4,7 @@ use arrayvec::ArrayVec;
 use parking_lot::RwLock;
 use rend3_types::TextureFormat;
 use thiserror::Error;
-use wgpu::{
-    AddressMode, BindGroup, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Color,
-    ColorTargetState, ColorWrites, CommandEncoder, Device, FilterMode, FragmentState, FrontFace, LoadOp,
-    MultisampleState, Operations, PipelineLayout, PipelineLayoutDescriptor, PolygonMode, PrimitiveState,
-    PrimitiveTopology, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor,
-    SamplerBindingType, SamplerDescriptor, ShaderModule, ShaderStages, StoreOp, Texture, TextureDescriptor,
-    TextureSampleType, TextureViewDescriptor, TextureViewDimension, VertexState,
-};
+use wgpu::{AddressMode, BindGroup, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Color, ColorTargetState, ColorWrites, CommandEncoder, Device, FilterMode, FragmentState, FrontFace, LoadOp, MipmapFilterMode, MultisampleState, Operations, PipelineCompilationOptions, PipelineLayout, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor, SamplerBindingType, SamplerDescriptor, ShaderModule, ShaderStages, StoreOp, Texture, TextureDescriptor, TextureSampleType, TextureViewDescriptor, TextureViewDimension, VertexState};
 
 use crate::{
     format_sso,
@@ -74,7 +67,7 @@ impl MipmapGenerator {
             address_mode_w: AddressMode::ClampToEdge,
             mag_filter: FilterMode::Linear,
             min_filter: FilterMode::Linear,
-            mipmap_filter: FilterMode::Linear,
+            mipmap_filter: MipmapFilterMode::Linear,
             lod_min_clamp: 0.0,
             lod_max_clamp: 100.0,
             compare: None,
@@ -92,8 +85,8 @@ impl MipmapGenerator {
 
         let pll = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("mipmap generator pipeline layout"),
-            bind_group_layouts: &[&texture_bgl, &sampler_bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&texture_bgl), Some(&sampler_bgl)],
+            immediate_size : 0
         });
 
         let pipelines = default_formats
@@ -113,9 +106,11 @@ impl MipmapGenerator {
         let label = format_sso!("mipmap pipeline {:?}", format);
         profiling::scope!("mipmap pipeline");
         device.create_render_pipeline(&RenderPipelineDescriptor {
+            cache : None,
+            multiview_mask : None,
             label: Some(&label),
             layout: Some(pll),
-            vertex: VertexState { module: sm, entry_point: "vs_main", buffers: &[] },
+            vertex: VertexState { module: sm, entry_point: Some("vs_main"), buffers: &[], compilation_options : PipelineCompilationOptions::default() },
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
                 strip_index_format: None,
@@ -128,11 +123,12 @@ impl MipmapGenerator {
             depth_stencil: None,
             multisample: MultisampleState::default(),
             fragment: Some(FragmentState {
+                compilation_options : PipelineCompilationOptions::default(),
                 module: sm,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(ColorTargetState { format, blend: None, write_mask: ColorWrites::all() })],
             }),
-            multiview: None,
+
         })
     }
 
@@ -199,10 +195,12 @@ impl MipmapGenerator {
                     view: dst_view,
                     resolve_target: None,
                     ops: Operations { load: LoadOp::Clear(Color::BLACK), store: StoreOp::Store },
+                    depth_slice : None
                 })],
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
 
             rpass.set_pipeline(pipeline);
