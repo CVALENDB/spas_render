@@ -1,8 +1,9 @@
 [package]
-name = "rend3-examples-package"
+name = "spas_render-examples-package"
 license = "MIT OR Apache-2.0 OR Zlib"
 version = "0.3.0"
-authors = ["The rend3 Developers"]
+authors = ["The spas_render Developers", "CVALENDB"]
+repository = "https://github.com/CVALENDB/spas_render"
 edition = "2021"
 publish = false
 rust-version = "1.71"
@@ -11,7 +12,7 @@ rust-version = "1.71"
 crate-type = ["lib", "cdylib"]
 
 [[bin]]
-name = "rend3-examples"
+name = "spas_render-examples"
 path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -48,17 +49,17 @@ pico-args = "0.5"
 # block on async functions
 pollster = "1.0.3"
 # Renderer core
-rend3 = { version = "^0.3.0", path = "../rend3" }
+spas_render = { version = "^0.3.0", path = "../spas_render" }
 # Play animations on imported gltf models
-rend3-anim = { version = "^0.3.0", path = "../rend3-anim" }
-# Egui integration with rend3
-rend3-egui = { version = "^0.3.0", path = "../rend3-egui" }
+spas_render-anim = { version = "^0.3.0", path = "../spas_render-anim" }
+# Egui integration with spas_render
+spas_render-egui = { version = "^0.3.0", path = "../spas_render-egui" }
 # Programmable render list that dictates how the scene renders
-rend3-routine = { version = "^0.3.0", path = "../rend3-routine" }
+spas_render-routine = { version = "^0.3.0", path = "../spas_render-routine" }
 # Framework that deals with the event loop, setting up the renderer, and platform differences.
-rend3-framework = { version = "^0.3.0", path = "../rend3-framework" }
+spas_render-framework = { version = "^0.3.0", path = "../spas_render-framework" }
 # Import gltf models
-rend3-gltf = { version = "^0.3.0", path = "../rend3-gltf" }
+spas_render-gltf = { version = "^0.3.0", path = "../spas_render-gltf" }
 # Opening URL's
 webbrowser = "1.2.7"
 # Instant but portable to the web
@@ -83,7 +84,7 @@ wasm-bindgen-futures = "0.4"
 ndk-glue = { version = "0.7", features = ["logger"] }
 
 [dev-dependencies]
-rend3-test = { version = "^0.3.0", path = "../rend3-test" }
+spas_render-test = { version = "^0.3.0", path = "../spas_render-test" }
 tokio = "1"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]

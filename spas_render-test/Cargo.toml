@@ -1,0 +1,33 @@
+[package]
+name = "spas_render-test"
+version = "0.3.0"
+authors = ["The spas_render Developers", "CVALENDB"]
+repository = "https://github.com/CVALENDB/spas_render"
+edition = "2021"
+description = "Testing utilities for spas_render."
+license = "MIT OR Apache-2.0 OR Zlib"
+rust-version = "1.71"
+publish=false
+autotests = false
+
+[[test]]
+path = "tests/root.rs"
+name = "spas_render-tests"
+
+[dependencies]
+anyhow = "1"
+env_logger = "0.11"
+flume = { version = "0.12.0", features = ["spin"] }
+glam = "0.34.3"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+spas_render = { path = "../spas_render" }
+spas_render-routine = { path = "../spas_render-routine" }
+wgpu = "30.0.2"
+
+# These should be dev-deps but doing this allows us to have a single attribute on all tests
+# and not need to have conditional attributes on every single test.
+tokio = { version = "1", features = ["rt", "macros"] }
+wasm-bindgen-test = { version = "0.3" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+nv-flip = "0.1"

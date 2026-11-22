@@ -1,3 +1,3 @@
 fn main() {
-    rend3_examples_package::main();
+    spas_render_examples_package::main();
 }

@@ -59,9 +59,9 @@ jobs:
           cargo +1.76 build --target ${{ matrix.target }} --profile ci
         if: matrix.target != 'wasm32-unknown-unknown'
 
-      - name: clippy (rend3-gltf featureless)
+      - name: clippy (spas_render-gltf featureless)
         run: |
-          cargo +1.76 clippy --target ${{ matrix.target }} --profile ci -p rend3-gltf --no-default-features
+          cargo +1.76 clippy --target ${{ matrix.target }} --profile ci -p spas_render-gltf --no-default-features
 
       - name: clippy
         run: |

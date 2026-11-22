@@ -1,0 +1,29 @@
+[package]
+name = "spas_render-routine"
+version = "0.3.0"
+authors = ["The spas_render Developers", "CVALENDB"]
+edition = "2021"
+description = "Customizable Render Routines for the spas_render rendering library."
+readme = "../README.md"
+repository = "https://github.com/CVALENDB/spas_render"
+license = "MIT OR Apache-2.0 OR Zlib"
+keywords = ["3d", "graphics", "spas_render", "renderer", "wgpu"]
+categories = ["game-development", "graphics", "rendering", "rendering::engine", "wasm"]
+rust-version = "1.71"
+
+[dependencies]
+arrayvec = "0.7"
+bitflags = "2"
+bytemuck = "1"
+codespan-reporting = "0.13.1"
+encase = { version = "0.13.0" }
+glam = { version = "0.34.3", features = ["bytemuck"] }
+log = "0.4"
+naga = { version = "30.0.2", features = ["wgsl-in"] }
+ordered-float = "5.5.1"
+profiling = {version = "1", default-features = false }
+spas_render = { version = "^0.3.0", path = "../spas_render" }
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wgpu = "30.0.2"

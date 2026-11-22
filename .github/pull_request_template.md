@@ -6,7 +6,7 @@
   - [ ] `cargo fmt` has been ran
   - [ ] `cargo clippy` reports no issues
   - [ ] `cargo test` succeeds
-  - [ ] `cargo rend3-doc` has no warnings
+  - [ ] `cargo spas_render-doc` has no warnings
   - [ ] `cargo deny check` issues have been fixed or added to deny.toml
 - Manually Checked:
   - [ ] relevant examples/test cases run

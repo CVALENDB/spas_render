@@ -1,0 +1,20 @@
+[package]
+name = "spas_render-egui"
+version = "0.3.0"
+authors = ["The spas_render Developers", "CVALENDB"]
+edition = "2021"
+description = "Egui Render Routine for the spas_render rendering library."
+readme = "../README.md"
+license = "MIT OR Apache-2.0 OR Zlib"
+repository = "https://github.com/CVALENDB/spas_render"
+keywords = ["3d", "graphics", "spas_render", "renderer", "egui"]
+categories = ["game-development", "graphics", "rendering", "rendering::engine", "wasm"]
+rust-version = "1.71"
+
+[dependencies]
+egui = "0.37.0"
+egui-wgpu = "0.37.0"
+glam = "0.34.3"
+spas_render = { version = "^0.3.0", path = "../spas_render" }
+wgpu = "30.0.2"
+ahash = "0.8.12"

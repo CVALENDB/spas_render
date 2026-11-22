@@ -1,11 +1,11 @@
 # {{crate}}
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/BVE-Reborn/rend3/CI)
-[![Crates.io](https://img.shields.io/crates/v/rend3)](https://crates.io/crates/rend3)
-[![Documentation](https://docs.rs/rend3/badge.svg)](https://docs.rs/rend3)
-![License](https://img.shields.io/crates/l/rend3)
-[![Matrix](https://img.shields.io/static/v1?label=rend3%20dev&message=%23rend3&color=blueviolet&logo=matrix)](https://matrix.to/#/#rend3:matrix.org)
-[![Matrix](https://img.shields.io/static/v1?label=rend3%20users&message=%23rend3-users&color=blueviolet&logo=matrix)](https://matrix.to/#/#rend3-users:matrix.org)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/CVALENDB/spas_render/CI)
+[![Crates.io](https://img.shields.io/crates/v/spas_render)](https://crates.io/crates/spas_render)
+[![Documentation](https://docs.rs/spas_render/badge.svg)](https://docs.rs/spas_render)
+![License](https://img.shields.io/crates/l/spas_render)
+[![Matrix](https://img.shields.io/static/v1?label=spas_render%20dev&message=%23spas_render&color=blueviolet&logo=matrix)](https://matrix.to/#/#spas_render:matrix.org)
+[![Matrix](https://img.shields.io/static/v1?label=spas_render%20users&message=%23spas_render-users&color=blueviolet&logo=matrix)](https://matrix.to/#/#spas_render-users:matrix.org)
 [![Discord](https://img.shields.io/discord/451037457475960852?color=7289DA&label=discord)](https://discord.gg/mjxXTVzaDg)
 
 
