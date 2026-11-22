@@ -1,0 +1,17 @@
+[package]
+name = "spas_render-anim"
+version = "0.3.0"
+authors = ["The spas_render Developers", "CVALENDB"]
+edition = "2021"
+description = "Skeletal animation playback utilities for spas_render rendering library."
+repository = "https://github.com/CVALENDB/spas_render"
+license = "MIT OR Apache-2.0 OR Zlib"
+keywords = ["3d", "animation", "spas_render", "renderer", "wgpu"]
+categories = ["game-development", "graphics", "rendering", "rendering::engine", "wasm"]
+rust-version = "1.71"
+
+[dependencies]
+itertools = "0.15.0"
+spas_render = { version = "^0.3.0", path = "../spas_render" }
+spas_render-routine = { version = "^0.3.0", path = "../spas_render-routine" }
+spas_render-gltf = { version = "^0.3.0", path = "../spas_render-gltf" }

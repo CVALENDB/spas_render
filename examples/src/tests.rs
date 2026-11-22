@@ -2,14 +2,14 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::Context;
 use glam::UVec2;
-use rend3_framework::{App, DefaultRoutines, Mutex, RedrawContext, SetupContext};
-use rend3_test::{compare_image_to_path, download_image};
+use spas_render_framework::{App, DefaultRoutines, Mutex, RedrawContext, SetupContext};
+use spas_render_test::{compare_image_to_path, download_image};
 
 pub struct TestConfiguration<A> {
     pub app: A,
     pub reference_path: &'static str,
     pub size: UVec2,
-    pub threshold_set: rend3_test::ThresholdSet,
+    pub threshold_set: spas_render_test::ThresholdSet,
 }
 
 #[allow(clippy::await_holding_lock)] // false positive
@@ -18,25 +18,25 @@ pub async fn test_app<A: App<T>, T: 'static>(mut config: TestConfiguration<A>) -
     config.app.register_panic_hook();
 
     let iad =
-        rend3_test::no_gpu_return!(config.app.create_iad().await).context("InstanceAdapterDevice creation failed")?;
+        spas_render_test::no_gpu_return!(config.app.create_iad().await).context("InstanceAdapterDevice creation failed")?;
 
     let renderer =
-        rend3::Renderer::new(iad.clone(), A::HANDEDNESS, Some(config.size.x as f32 / config.size.y as f32)).unwrap();
+        spas_render::Renderer::new(iad.clone(), A::HANDEDNESS, Some(config.size.x as f32 / config.size.y as f32)).unwrap();
 
-    let mut spp = rend3::ShaderPreProcessor::new();
-    rend3_routine::builtin_shaders(&mut spp);
+    let mut spp = spas_render::ShaderPreProcessor::new();
+    spas_render_routine::builtin_shaders(&mut spp);
 
     let base_rendergraph = config.app.create_base_rendergraph(&renderer, &spp);
     let mut data_core = renderer.data_core.lock();
     let routines = Arc::new(DefaultRoutines {
-        pbr: Mutex::new(rend3_routine::pbr::PbrRoutine::new(
+        pbr: Mutex::new(spas_render_routine::pbr::PbrRoutine::new(
             &renderer,
             &mut data_core,
             &spp,
             &base_rendergraph.interfaces,
         )),
-        skybox: Mutex::new(rend3_routine::skybox::SkyboxRoutine::new(&renderer, &spp, &base_rendergraph.interfaces)),
-        tonemapping: Mutex::new(rend3_routine::tonemapping::TonemappingRoutine::new(
+        skybox: Mutex::new(spas_render_routine::skybox::SkyboxRoutine::new(&renderer, &spp, &base_rendergraph.interfaces)),
+        tonemapping: Mutex::new(spas_render_routine::tonemapping::TonemappingRoutine::new(
             &renderer,
             &spp,
             &base_rendergraph.interfaces,

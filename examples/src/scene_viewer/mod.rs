@@ -5,7 +5,7 @@ use std::{collections::HashMap, future::Future, hash::BuildHasher, path::Path, s
 use flume::Receiver;
 use glam::{DVec2, Mat3A, Mat4, UVec2, Vec3, Vec3A};
 use pico_args::Arguments;
-use rend3::{
+use spas_render::{
     types::{
         Backend, Camera, CameraProjection, DirectionalLight, DirectionalLightHandle, SampleCount, Texture,
         TextureFormat,
@@ -13,9 +13,9 @@ use rend3::{
     util::typedefs::{FastHashMap, RendererStatistics},
     Renderer, RendererProfile,
 };
-use rend3_framework::{lock, AssetPath, Mutex};
-use rend3_gltf::{GltfLoadSettings, GltfSceneInstance, LoadedGltfScene};
-use rend3_routine::{pbr::NormalTextureYDirection, skybox::SkyboxRoutine};
+use spas_render_framework::{lock, AssetPath, Mutex};
+use spas_render_gltf::{GltfLoadSettings, GltfSceneInstance, LoadedGltfScene};
+use spas_render_routine::{pbr::NormalTextureYDirection, skybox::SkyboxRoutine};
 use web_time::Instant;
 use winit::{
     event::{DeviceEvent, ElementState, Event, KeyEvent, MouseButton, WindowEvent},
@@ -23,7 +23,7 @@ use winit::{
     window::{Fullscreen, WindowAttributes},
 };
 
-async fn load_skybox_image(loader: &rend3_framework::AssetLoader, data: &mut Vec<u8>, path: &str) {
+async fn load_skybox_image(loader: &spas_render_framework::AssetLoader, data: &mut Vec<u8>, path: &str) {
     let request_response =
         loader.get_asset(AssetPath::Internal(path)).await.unwrap_or_else(|e| panic!("Error {}: {}", path, e));
     let decoded = image::load_from_memory(&request_response).unwrap().into_rgba8();
@@ -33,7 +33,7 @@ async fn load_skybox_image(loader: &rend3_framework::AssetLoader, data: &mut Vec
 
 async fn load_skybox(
     renderer: &Arc<Renderer>,
-    loader: &rend3_framework::AssetLoader,
+    loader: &spas_render_framework::AssetLoader,
     skybox_routine: &Mutex<SkyboxRoutine>,
 ) -> anyhow::Result<()> {
     let mut data = Vec::new();
@@ -49,8 +49,8 @@ async fn load_skybox(
         size: UVec2::new(2048, 2048),
         data,
         label: Some("background".into()),
-        mip_count: rend3::types::MipmapCount::ONE,
-        mip_source: rend3::types::MipmapSource::Uploaded,
+        mip_count: spas_render::types::MipmapCount::ONE,
+        mip_source: spas_render::types::MipmapSource::Uploaded,
     })?;
     lock(skybox_routine).set_background_texture(Some(handle));
     Ok(())
@@ -58,10 +58,10 @@ async fn load_skybox(
 
 async fn load_gltf(
     renderer: &Arc<Renderer>,
-    loader: &rend3_framework::AssetLoader,
-    settings: &rend3_gltf::GltfLoadSettings,
+    loader: &spas_render_framework::AssetLoader,
+    settings: &spas_render_gltf::GltfLoadSettings,
     location: AssetPath<'_>,
-) -> anyhow::Result<(rend3_gltf::LoadedGltfScene, GltfSceneInstance)> {
+) -> anyhow::Result<(spas_render_gltf::LoadedGltfScene, GltfSceneInstance)> {
     // profiling::scope!("loading gltf");
     let gltf_start = Instant::now();
     let is_default_scene = matches!(location, AssetPath::Internal(_));
@@ -88,8 +88,8 @@ async fn load_gltf(
                 to download and unzip it into the right place. If you're running it through not-git, pass a custom folder to the -C argument
                 to tar, then run scene-viewer path/to/scene.gltf.
                 
-                curl{0} https://cdn.cwfitz.com/scenes/rend3-default-scene.tar -o ./examples/src/scene_viewer/resources/rend3-default-scene.tar
-                tar{0} xf ./examples/src/scene_viewer/resources/rend3-default-scene.tar -C ./examples/src/scene_viewer/resources
+                curl{0} https://cdn.cwfitz.com/scenes/spas_render-default-scene.tar -o ./examples/src/scene_viewer/resources/spas_render-default-scene.tar
+                tar{0} xf ./examples/src/scene_viewer/resources/spas_render-default-scene.tar -C ./examples/src/scene_viewer/resources
 
                 ***************
             ", suffix);
@@ -101,8 +101,8 @@ async fn load_gltf(
 
     let gltf_elapsed = gltf_start.elapsed();
     let resources_start = Instant::now();
-    let (scene, instance) = rend3_gltf::load_gltf(renderer, &gltf_data, settings, |uri| async {
-        if let Some(base64) = rend3_gltf::try_load_base64(&uri) {
+    let (scene, instance) = spas_render_gltf::load_gltf(renderer, &gltf_data, settings, |uri| async {
+        if let Some(base64) = spas_render_gltf::try_load_base64(&uri) {
             Ok(base64)
         } else {
             log::info!("Loading resource {}", uri);
@@ -131,10 +131,10 @@ fn extract_backend(value: &str) -> Result<Backend, &'static str> {
     })
 }
 
-fn extract_profile(value: &str) -> Result<rend3::RendererProfile, &'static str> {
+fn extract_profile(value: &str) -> Result<spas_render::RendererProfile, &'static str> {
     Ok(match value.to_lowercase().as_str() {
-        "legacy" | "c" | "cpu" => rend3::RendererProfile::CpuDriven,
-        "modern" | "g" | "gpu" => rend3::RendererProfile::GpuDriven,
+        "legacy" | "c" | "cpu" => spas_render::RendererProfile::CpuDriven,
+        "modern" | "g" | "gpu" => spas_render::RendererProfile::GpuDriven,
         _ => return Err("unknown rendermode"),
     })
 }
@@ -147,11 +147,11 @@ fn extract_msaa(value: &str) -> Result<SampleCount, &'static str> {
     })
 }
 
-fn extract_vsync(value: &str) -> Result<rend3::types::PresentMode, &'static str> {
+fn extract_vsync(value: &str) -> Result<spas_render::types::PresentMode, &'static str> {
     Ok(match value.to_lowercase().as_str() {
-        "immediate" => rend3::types::PresentMode::Immediate,
-        "fifo" => rend3::types::PresentMode::Fifo,
-        "mailbox" => rend3::types::PresentMode::Mailbox,
+        "immediate" => spas_render::types::PresentMode::Immediate,
+        "fifo" => spas_render::types::PresentMode::Fifo,
+        "mailbox" => spas_render::types::PresentMode::Mailbox,
         _ => return Err("invalid msaa count"),
     })
 }
@@ -229,7 +229,7 @@ where
 const HELP: &str = "\
 scene-viewer
 
-gltf and glb scene viewer powered by the rend3 rendering library.
+gltf and glb scene viewer powered by the spas_render rendering library.
 
 usage: scene-viewer --options ./path/to/gltf/file.gltf
 
@@ -263,7 +263,7 @@ Controls:
   --camera x,y,z,pitch,yaw     Spawns the camera at the given position. Press Period to get the current camera position.
 
 Debug:
-  --wait-for-load              Wait for the gltf before rendering the first frame. Useful for debugging and testing rend3.
+  --wait-for-load              Wait for the gltf before rendering the first frame. Useful for debugging and testing spas_render.
 ";
 
 pub struct SceneViewer {
@@ -274,12 +274,12 @@ pub struct SceneViewer {
     file_to_load: Option<String>,
     walk_speed: f32,
     run_speed: f32,
-    gltf_settings: rend3_gltf::GltfLoadSettings,
+    gltf_settings: spas_render_gltf::GltfLoadSettings,
     directional_light_direction: Option<Vec3>,
     directional_light_intensity: f32,
     directional_light: Option<DirectionalLightHandle>,
     ambient_light_level: f32,
-    present_mode: rend3::types::PresentMode,
+    present_mode: spas_render::types::PresentMode,
     samples: SampleCount,
 
     fullscreen: bool,
@@ -295,7 +295,7 @@ pub struct SceneViewer {
 
     scene: Option<LoadedGltfScene>,
     instance: Option<GltfSceneInstance>,
-    grabber: Option<rend3_framework::Grabber>,
+    grabber: Option<spas_render_framework::Grabber>,
 }
 
 impl Default for SceneViewer {
@@ -428,19 +428,19 @@ impl SceneViewer {
         app
     }
 }
-impl rend3_framework::App for SceneViewer {
-    const HANDEDNESS: rend3::types::Handedness = rend3::types::Handedness::Right;
+impl spas_render_framework::App for SceneViewer {
+    const HANDEDNESS: spas_render::types::Handedness = spas_render::types::Handedness::Right;
 
     fn create_iad<'a>(
         &'a mut self,
     ) -> std::pin::Pin<
         Box<
-            dyn std::future::Future<Output = Result<rend3::InstanceAdapterDevice, rend3::RendererInitializationError>>
+            dyn std::future::Future<Output = Result<spas_render::InstanceAdapterDevice, spas_render::RendererInitializationError>>
                 + 'a,
         >,
     > {
         Box::pin(async move {
-            rend3::create_iad(self.desired_backend, self.desired_device_name.clone(), self.desired_profile, None).await
+            spas_render::create_iad(self.desired_backend, self.desired_device_name.clone(), self.desired_profile, None).await
         })
     }
 
@@ -448,7 +448,7 @@ impl rend3_framework::App for SceneViewer {
         self.samples
     }
 
-    fn present_mode(&self) -> rend3::types::PresentMode {
+    fn present_mode(&self) -> spas_render::types::PresentMode {
         self.present_mode
     }
 
@@ -456,8 +456,8 @@ impl rend3_framework::App for SceneViewer {
         1.0
     }
 
-    fn setup(&mut self, context: rend3_framework::SetupContext<'_>) {
-        self.grabber = context.windowing.map(|windowing| rend3_framework::Grabber::new(windowing.window));
+    fn setup(&mut self, context: spas_render_framework::SetupContext<'_>) {
+        self.grabber = context.windowing.map(|windowing| spas_render_framework::Grabber::new(windowing.window));
 
         if let Some(direction) = self.directional_light_direction {
             self.directional_light = Some(context.renderer.add_directional_light(DirectionalLight {
@@ -478,7 +478,7 @@ impl rend3_framework::App for SceneViewer {
 
         let wait_for_load = self.wait_for_load;
         spawn(async move {
-            let loader = rend3_framework::AssetLoader::new_local(
+            let loader = spas_render_framework::AssetLoader::new_local(
                 concat!(env!("CARGO_MANIFEST_DIR"), "/src/scene_viewer/resources/"),
                 "",
                 "http://localhost:8000/resources/",
@@ -508,7 +508,7 @@ impl rend3_framework::App for SceneViewer {
         }
     }
 
-    fn handle_event(&mut self, context: rend3_framework::EventContext<'_>, event: winit::event::Event<()>) {
+    fn handle_event(&mut self, context: spas_render_framework::EventContext<'_>, event: winit::event::Event<()>) {
         match event {
             Event::WindowEvent { event: WindowEvent::Focused(focus), .. } => {
                 if !focus {
@@ -576,7 +576,7 @@ impl rend3_framework::App for SceneViewer {
         }
     }
 
-    fn handle_redraw(&mut self, context: rend3_framework::RedrawContext<'_, ()>) {
+    fn handle_redraw(&mut self, context: spas_render_framework::RedrawContext<'_, ()>) {
         profiling::scope!("RedrawRequested");
 
         if let Some(ref receiver) = self.loading_reciever {
@@ -654,31 +654,31 @@ impl rend3_framework::App for SceneViewer {
         skybox_routine.evaluate(context.renderer);
 
         // Build a rendergraph
-        let mut graph = rend3::graph::RenderGraph::new();
+        let mut graph = spas_render::graph::RenderGraph::new();
 
         let frame_handle = graph.add_imported_render_target(
             context.surface_texture,
             0..1,
             0..1,
-            rend3::graph::ViewportRect::from_size(context.resolution),
+            spas_render::graph::ViewportRect::from_size(context.resolution),
         );
         // Add the default rendergraph
         context.base_rendergraph.add_to_graph(
             &mut graph,
-            rend3_routine::base::BaseRenderGraphInputs {
+            spas_render_routine::base::BaseRenderGraphInputs {
                 eval_output: &eval_output,
-                routines: rend3_routine::base::BaseRenderGraphRoutines {
+                routines: spas_render_routine::base::BaseRenderGraphRoutines {
                     pbr: &pbr_routine,
                     skybox: Some(&skybox_routine),
                     tonemapping: &tonemapping_routine,
                 },
-                target: rend3_routine::base::OutputRenderTarget {
+                target: spas_render_routine::base::OutputRenderTarget {
                     handle: frame_handle,
                     resolution: context.resolution,
                     samples: self.samples,
                 },
             },
-            rend3_routine::base::BaseRenderGraphSettings {
+            spas_render_routine::base::BaseRenderGraphSettings {
                 ambient_color: Vec3::splat(self.ambient_light_level).extend(1.0),
                 clear_color: glam::Vec4::new(0.0, 0.0, 0.0, 1.0),
             },
@@ -700,11 +700,11 @@ pub fn main() {
         builder = builder.with_fullscreen(Some(Fullscreen::Borderless(None)));
     }
 
-    rend3_framework::start(app, builder);
+    spas_render_framework::start(app, builder);
 }
 
 #[cfg(test)]
-#[rend3_test::test_attr]
+#[spas_render_test::test_attr]
 async fn default_scene() {
     let mut app = SceneViewer::default();
     app.file_to_load = Some("src/scene_viewer/resources/default-scene/scene.gltf".into());
@@ -715,14 +715,14 @@ async fn default_scene() {
         app,
         reference_path: "src/scene_viewer/screenshot.png",
         size: glam::UVec2::new(1280, 720),
-        threshold_set: rend3_test::Threshold::Mean(0.01).into(),
+        threshold_set: spas_render_test::Threshold::Mean(0.01).into(),
     })
     .await
     .unwrap();
 }
 
 #[cfg(test)]
-#[rend3_test::test_attr]
+#[spas_render_test::test_attr]
 async fn bistro() {
     let mut app = SceneViewer::default();
     app.file_to_load = Some("src/scene_viewer/resources/bistro-full/bistro.gltf".into());
@@ -741,7 +741,7 @@ async fn bistro() {
         app,
         reference_path: "src/scene_viewer/bistro.png",
         size: glam::UVec2::new(1280, 720),
-        threshold_set: rend3_test::Threshold::Mean(0.02).into(),
+        threshold_set: spas_render_test::Threshold::Mean(0.02).into(),
     })
     .await
     .unwrap();

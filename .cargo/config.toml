@@ -1,5 +1,5 @@
 [alias]
-rend3-doc = [
+spas_render-doc = [
     "doc",
     "--no-deps",
     "--lib",
@@ -7,7 +7,7 @@ rend3-doc = [
     "--exclude",
     "scene-viewer",
     "--exclude",
-    "rend3-cube-example",
+    "spas_render-cube-example",
 ]
 
 [build]

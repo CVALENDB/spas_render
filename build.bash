@@ -12,12 +12,12 @@ case $1 in
         else
             WASM_BUILD_DIR=debug
         fi
-        cargo build --target wasm32-unknown-unknown $BUILD_FLAGS --bin rend3-examples
+        cargo build --target wasm32-unknown-unknown $BUILD_FLAGS --bin spas_render-examples
         mkdir -p target/generated/
         rm -rf target/generated/*
         cp -r examples/src/$1/resources target/generated/ || true
         sed "s/{{example}}/$1/g" > target/generated/index.html < examples/resources/index.html
-        wasm-bindgen --out-dir target/generated --target web target/wasm32-unknown-unknown/$WASM_BUILD_DIR/rend3-examples.wasm
+        wasm-bindgen --out-dir target/generated --target web target/wasm32-unknown-unknown/$WASM_BUILD_DIR/spas_render-examples.wasm
     ;;
     serve)
         shift
@@ -27,31 +27,31 @@ case $1 in
         cargo fmt
         cargo clippy
         cargo test
-        cargo rend3-doc
-        cargo clippy --target wasm32-unknown-unknown --workspace --exclude rend3-imgui --exclude rend3-imgui-example
+        cargo spas_render-doc
+        cargo clippy --target wasm32-unknown-unknown --workspace --exclude spas_render-imgui --exclude spas_render-imgui-example
         cargo deny --all-features check
     ;;
     download-assets)
-        curl https://cdn.cwfitz.com/scenes/rend3-default-scene.tar -o ./examples/src/scene_viewer/resources/rend3-default-scene.tar
-        tar xf ./examples/src/scene_viewer/resources/rend3-default-scene.tar -C ./examples/src/scene_viewer/resources
+        curl https://cdn.cwfitz.com/scenes/spas_render-default-scene.tar -o ./examples/src/scene_viewer/resources/spas_render-default-scene.tar
+        tar xf ./examples/src/scene_viewer/resources/spas_render-default-scene.tar -C ./examples/src/scene_viewer/resources
         curl https://cdn.cwfitz.com/scenes/bistro-full.zip -o ./examples/src/scene_viewer/resources/bistro-full.zip
         unzip ./examples/src/scene_viewer/resources/bistro-full.zip -d ./examples/src/scene_viewer/resources
     ;;
     update-readme)
-        cd rend3
+        cd spas_render
         cargo install cargo-readme
         cargo readme -t ../README.tpl -o ../README.md
     ;;
     help | *)
         set +x
-        echo "rend3 build script"
+        echo "spas_render build script"
         echo ""
-        echo "Contains helpful sets of commands for rend3's development."
-        echo "Building rend3 does not require any of these. Just use cargo as normal."
+        echo "Contains helpful sets of commands for spas_render's development."
+        echo "Building spas_render does not require any of these. Just use cargo as normal."
         echo ""
         echo "Subcommands:"
         echo "help                         This message."
-        echo "update-readme                Rebuilds the README.md file from the rend3 crate docs."
+        echo "update-readme                Rebuilds the README.md file from the spas_render crate docs."
         echo "download-assets              Downloads the assets used in the examples/tests."
         echo "web-bin [release] <BINARY>   Builds BINARY as wasm, and runs wasm-bindgen on the result."
         echo "serve                        Serve a web server from target/generated using simple-http-server."
