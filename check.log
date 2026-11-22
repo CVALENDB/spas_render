@@ -1,0 +1,733 @@
+    Checking rend3-types v0.3.0 (/home/cristian/forks/spas_render/rend3-types)
+    Checking rend3 v0.3.0 (/home/cristian/forks/spas_render/rend3)
+warning: unused import: `Gles3MinorVersion`
+ --> rend3/src/setup.rs:5:138
+  |
+5 | use wgpu::{Adapter, AdapterInfo, Backend, Backends, BufferAddress, Device, DeviceDescriptor, DeviceType, ExperimentalFeatures, Features, Gles3MinorVersion, Instance, InstanceFlags, Limits, MemoryHints, Que...
+  |                                                                                                                                          ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `wgpu::wgt::FeatureBits`
+ --> rend3/src/setup.rs:6:5
+  |
+6 | use wgpu::wgt::FeatureBits;
+  |     ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0061]: this method takes 2 arguments but 3 arguments were supplied
+   --> rend3/src/renderer/eval.rs:29:81
+    |
+ 29 |                     let profiler_query = data_core.profiler.try_lock().unwrap().begin_query(
+    |                                                                                 ^^^^^^^^^^^
+...
+ 32 |                         &renderer.device,
+    |                         ---------------- unexpected argument #3 of type `&Arc<wgpu::Device>`
+    |
+note: method defined here
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-profiler-0.28.0/src/profiler.rs:232:12
+    |
+232 |     pub fn begin_query<Recorder: ProfilerCommandRecorder>(
+    |            ^^^^^^^^^^^
+help: remove the extra argument
+    |
+ 31 -                         &mut encoder,
+ 32 -                         &renderer.device,
+ 31 +                         &mut encoder,
+    |
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+  --> rend3/src/renderer/setup.rs:65:9
+   |
+65 |           wgpu_profiler::GpuProfiler::new(GpuProfilerSettings {
+   |  _________^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^_-
+66 | |             enable_timer_queries: features.contains(wgpu::Features::TIMESTAMP_QUERY) && !cfg!(target_arch = "wasm32"),
+67 | |             enable_debug_groups: true,
+68 | |             max_num_pending_frames: 4,
+69 | |         })
+   | |_________- argument #1 of type `&wgpu::Device` is missing
+   |
+note: associated function defined here
+  --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-profiler-0.28.0/src/profiler.rs:58:12
+   |
+58 |     pub fn new(
+   |            ^^^
+help: provide the argument
+   |
+65 |         wgpu_profiler::GpuProfiler::new(/* &Device */, GpuProfilerSettings {
+   |                                         ++++++++++++++
+
+error[E0308]: mismatched types
+   --> rend3/src/managers/mesh.rs:284:71
+    |
+284 |             return Err(MeshCreationError::ExceededMaximumBufferSize { max_buffer_size });
+    |                                                                       ^^^^^^^^^^^^^^^ expected `u32`, found `u64`
+    |
+help: you can convert a `u64` to a `u32` and panic if the converted value doesn't fit
+    |
+284 |             return Err(MeshCreationError::ExceededMaximumBufferSize { max_buffer_size: max_buffer_size.try_into().unwrap() });
+    |                                                                       ++++++++++++++++                ++++++++++++++++++++
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:129:21
+     |
+ 129 |             format: texture.format,
+     |                     ^^^^^^^^^^^^^^ expected `wgpu::TextureFormat`, found `rend3_types::TextureFormat`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+   --> rend3/src/managers/texture.rs:130:20
+    |
+130 |             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_SRC | TextureUsages::COPY_DST,
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu::TextureUsages`, found `rend3_types::TextureUsages`
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |           |
+    |           this is the expected type
+    |           this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:159:1
+    |
+159 | / bitflags::bitflags! {
+160 | |     /// Different ways that you can use a texture.
+161 | |     ///
+162 | |     /// The usages determine what kind of memory the texture is allocated from and what
+...   |
+210 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> rend3/src/managers/texture.rs:149:68
+    |
+149 |                 let desc = TextureDescriptor { usage: desc.usage | TextureUsages::RENDER_ATTACHMENT, ..desc };
+    |                                                       ----------   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu::TextureUsages`, found `rend3_types::TextureUsages`
+    |                                                       |
+    |                                                       expected because this is `wgpu::TextureUsages`
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |           |
+    |           this is the expected type
+    |           this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:159:1
+    |
+159 | / bitflags::bitflags! {
+160 | |     /// Different ways that you can use a texture.
+161 | |     ///
+162 | |     /// The usages determine what kind of memory the texture is allocated from and what
+...   |
+210 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:362:21
+     |
+ 362 |             format: TextureFormat::R8Unorm,
+     |                     ^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu::TextureFormat`, found `rend3_types::TextureFormat`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+   --> rend3/src/managers/texture.rs:363:20
+    |
+363 |             usage: TextureUsages::TEXTURE_BINDING,
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu::TextureUsages`, found `rend3_types::TextureUsages`
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |           |
+    |           this is the expected type
+    |           this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:159:1
+    |
+159 | / bitflags::bitflags! {
+160 | |     /// Different ways that you can use a texture.
+161 | |     ///
+162 | |     /// The usages determine what kind of memory the texture is allocated from and what
+...   |
+210 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> rend3/src/managers/texture.rs:370:53
+    |
+370 |     let sample_type = format.sample_type(None, Some(features));
+    |                                                ---- ^^^^^^^^ expected `wgpu_types::Features`, found `wgpu::Features`
+    |                                                |
+    |                                                arguments to this enum variant are incorrect
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/features.rs:178:9
+    |
+178 | /         pub struct $name {
+179 | |             $(
+180 | |                 #[allow(missing_docs)]
+181 | |                 $vis $lower_inner_name: $inner_name,
+182 | |             )*
+183 | |         }
+    | |_________- this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:225:1
+    |
+225 | / bitflags::bitflags! {
+226 | |     /// Features that are not guaranteed to be supported.
+227 | |     ///
+228 | |     /// These are either part of the webgpu standard, or are extension features supported by
+...   |
+857 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+help: the type constructed contains `wgpu::Features` due to the type of the argument passed
+   --> rend3/src/managers/texture.rs:370:48
+    |
+370 |     let sample_type = format.sample_type(None, Some(features));
+    |                                                ^^^^^--------^
+    |                                                     |
+    |                                                     this argument influences the type of `Some`
+note: tuple variant defined here
+   --> /home/cristian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:606:5
+    |
+606 |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
+    |     ^^^^
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:372:14
+     |
+ 372 |         Some(TextureSampleType::Float { filterable: true }) => Ok(()),
+     |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu_types::TextureSampleType`, found `TextureSampleType`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:6043:1
+     |
+6043 | pub enum TextureSampleType {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:295:1
+     |
+ 295 | pub enum TextureSampleType {
+     | -------------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:373:14
+     |
+ 373 |         Some(TextureSampleType::Float { filterable: false }) => {
+     |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu_types::TextureSampleType`, found `TextureSampleType`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:6043:1
+     |
+6043 | pub enum TextureSampleType {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:295:1
+     |
+ 295 | pub enum TextureSampleType {
+     | -------------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:374:89
+     |
+ 374 |             Err(TextureCreationError::TextureFormatNotFilterable { format, sample_type: sample_type.unwrap() })
+     |                                                                                         ^^^^^^^^^^^^^^^^^^^^ expected `TextureSampleType`, found `wgpu_types::TextureSampleType`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:295:1
+     |
+ 295 | pub enum TextureSampleType {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:6043:1
+     |
+6043 | pub enum TextureSampleType {
+     | -------------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+    --> rend3/src/managers/texture.rs:376:72
+     |
+ 376 |         _ => Err(TextureCreationError::TextureFormatNotFloat { format, sample_type }),
+     |                                                                        ^^^^^^^^^^^ expected `TextureSampleType`, found `wgpu_types::TextureSampleType`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:295:1
+     |
+ 295 | pub enum TextureSampleType {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:6043:1
+     |
+6043 | pub enum TextureSampleType {
+     | -------------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0614]: type `QueueWriteBufferView` cannot be dereferenced
+  --> rend3/src/util/buffer.rs:66:41
+   |
+66 |         encase::StorageBuffer::new(&mut *mapped).write(data).unwrap();
+   |                                         ^^^^^^^ can't be dereferenced
+
+error[E0599]: no method named `pop_error_scope` found for reference `&'a wgpu::Device` in the current scope
+   --> rend3/src/util/error_scope.rs:37:38
+    |
+ 37 |         let mut future = self.device.pop_error_scope();
+    |                                      ^^^^^^^^^^^^^^^
+    |
+help: there is a method `push_error_scope` with a similar name, but with different arguments
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-30.0.2/src/api/device.rs:542:5
+    |
+542 |     pub fn push_error_scope(&self, filter: ErrorFilter) -> ErrorScopeGuard {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+  --> rend3/src/util/mipmap.rs:77:28
+   |
+77 |             mipmap_filter: FilterMode::Linear,
+   |                            ^^^^^^^^^^^^^^^^^^ expected `MipmapFilterMode`, found `FilterMode`
+
+error[E0308]: mismatched types
+  --> rend3/src/util/mipmap.rs:95:35
+   |
+95 |             bind_group_layouts: &[&texture_bgl, &sampler_bgl],
+   |                                   ^^^^^^^^^^^^ expected `Option<&BindGroupLayout>`, found `&BindGroupLayout`
+   |
+   = note:   expected enum `std::option::Option<&wgpu::BindGroupLayout>`
+           found reference `&wgpu::BindGroupLayout`
+help: try wrapping the expression in `Some`
+   |
+95 |             bind_group_layouts: &[Some(&texture_bgl), &sampler_bgl],
+   |                                   +++++            +
+
+error[E0560]: struct `wgpu::PipelineLayoutDescriptor<'_>` has no field named `push_constant_ranges`
+  --> rend3/src/util/mipmap.rs:96:13
+   |
+96 |             push_constant_ranges: &[],
+   |             ^^^^^^^^^^^^^^^^^^^^ `wgpu::PipelineLayoutDescriptor<'_>` does not have this field
+   |
+   = note: available fields are: `immediate_size`
+
+error[E0308]: mismatched types
+   --> rend3/src/util/mipmap.rs:118:60
+    |
+118 |             vertex: VertexState { module: sm, entry_point: "vs_main", buffers: &[] },
+    |                                                            ^^^^^^^^^ expected `Option<&str>`, found `&str`
+    |
+    = note:   expected enum `std::option::Option<&str>`
+            found reference `&'static str`
+help: try wrapping the expression in `Some`
+    |
+118 |             vertex: VertexState { module: sm, entry_point: Some("vs_main"), buffers: &[] },
+    |                                                            +++++         +
+
+error[E0063]: missing field `compilation_options` in initializer of `wgpu::VertexState<'_>`
+   --> rend3/src/util/mipmap.rs:118:21
+    |
+118 |             vertex: VertexState { module: sm, entry_point: "vs_main", buffers: &[] },
+    |                     ^^^^^^^^^^^ missing `compilation_options`
+
+error[E0308]: mismatched types
+   --> rend3/src/util/mipmap.rs:132:30
+    |
+132 |                 entry_point: "fs_main",
+    |                              ^^^^^^^^^ expected `Option<&str>`, found `&str`
+    |
+    = note:   expected enum `std::option::Option<&str>`
+            found reference `&'static str`
+help: try wrapping the expression in `Some`
+    |
+132 |                 entry_point: Some("fs_main"),
+    |                              +++++         +
+
+error[E0308]: mismatched types
+    --> rend3/src/util/mipmap.rs:133:52
+     |
+ 133 |                 targets: &[Some(ColorTargetState { format, blend: None, write_mask: ColorWrites::all() })],
+     |                                                    ^^^^^^ expected `wgpu::TextureFormat`, found `rend3_types::TextureFormat`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0063]: missing field `compilation_options` in initializer of `wgpu::FragmentState<'_>`
+   --> rend3/src/util/mipmap.rs:130:28
+    |
+130 |             fragment: Some(FragmentState {
+    |                            ^^^^^^^^^^^^^ missing `compilation_options`
+
+error[E0560]: struct `wgpu::RenderPipelineDescriptor<'_>` has no field named `multiview`
+   --> rend3/src/util/mipmap.rs:135:13
+    |
+135 |             multiview: None,
+    |             ^^^^^^^^^ `wgpu::RenderPipelineDescriptor<'_>` does not have this field
+    |
+    = note: available fields are: `multiview_mask`, `cache`
+
+error[E0308]: mismatched types
+    --> rend3/src/util/mipmap.rs:164:49
+     |
+ 164 |         let pipeline = match read_pipelines.get(&desc.format) {
+     |                                             --- ^^^^^^^^^^^^ expected `rend3_types::TextureFormat`, found `wgpu::TextureFormat`
+     |                                             |
+     |                                             arguments to this method are incorrect
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+note: method defined here
+    --> /home/cristian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/map.rs:1034:12
+     |
+1034 |     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&V>
+     |            ^^^
+
+error[E0308]: mismatched types
+    --> rend3/src/util/mipmap.rs:171:76
+     |
+ 171 |                     .insert(desc.format, Self::build_blit_pipeline(device, desc.format, &self.pll, &self.sm));
+     |                                          -------------------------         ^^^^^^^^^^^ expected `rend3_types::TextureFormat`, found `wgpu::TextureFormat`
+     |                                          |
+     |                                          arguments to this function are incorrect
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+note: associated function defined here
+    --> rend3/src/util/mipmap.rs:107:8
+     |
+ 107 |     fn build_blit_pipeline(
+     |        ^^^^^^^^^^^^^^^^^^^
+ 108 |         device: &Device,
+ 109 |         format: TextureFormat,
+     |         ---------------------
+
+error[E0308]: mismatched types
+    --> rend3/src/util/mipmap.rs:171:29
+     |
+ 171 |                     .insert(desc.format, Self::build_blit_pipeline(device, desc.format, &self.pll, &self.sm));
+     |                      ------ ^^^^^^^^^^^ expected `rend3_types::TextureFormat`, found `wgpu::TextureFormat`
+     |                      |
+     |                      arguments to this method are incorrect
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+note: method defined here
+    --> /home/cristian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/map.rs:1332:12
+     |
+1332 |     pub fn insert(&mut self, k: K, v: V) -> Option<V> {
+     |            ^^^^^^
+
+error[E0308]: mismatched types
+    --> rend3/src/util/mipmap.rs:175:36
+     |
+ 175 |                 read_pipelines.get(&desc.format).unwrap()
+     |                                --- ^^^^^^^^^^^^ expected `rend3_types::TextureFormat`, found `wgpu::TextureFormat`
+     |                                |
+     |                                arguments to this method are incorrect
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+note: method defined here
+    --> /home/cristian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/map.rs:1034:12
+     |
+1034 |     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&V>
+     |            ^^^
+
+error[E0063]: missing field `depth_slice` in initializer of `wgpu::RenderPassColorAttachment<'_>`
+   --> rend3/src/util/mipmap.rs:198:43
+    |
+198 |                 color_attachments: &[Some(RenderPassColorAttachment {
+    |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^ missing `depth_slice`
+
+error[E0063]: missing field `multiview_mask` in initializer of `wgpu::RenderPassDescriptor<'_>`
+   --> rend3/src/util/mipmap.rs:196:56
+    |
+196 |             let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
+    |                                                        ^^^^^^^^^^^^^^^^^^^^ missing `multiview_mask`
+
+error[E0599]: no method named `present` found for struct `wgpu::SurfaceTexture` in the current scope
+  --> rend3/src/util/output.rs:27:21
+   |
+27 |             surface.present();
+   |                     ^^^^^^^ method not found in `wgpu::SurfaceTexture`
+
+error[E0308]: mismatched types
+  --> rend3/src/util/scatter_copy.rs:55:35
+   |
+55 |             bind_group_layouts: &[&bgl],
+   |                                   ^^^^ expected `Option<&BindGroupLayout>`, found `&BindGroupLayout`
+   |
+   = note:   expected enum `std::option::Option<&wgpu::BindGroupLayout>`
+           found reference `&wgpu::BindGroupLayout`
+help: try wrapping the expression in `Some`
+   |
+55 |             bind_group_layouts: &[Some(&bgl)],
+   |                                   +++++    +
+
+error[E0560]: struct `wgpu::PipelineLayoutDescriptor<'_>` has no field named `push_constant_ranges`
+  --> rend3/src/util/scatter_copy.rs:56:13
+   |
+56 |             push_constant_ranges: &[],
+   |             ^^^^^^^^^^^^^^^^^^^^ `wgpu::PipelineLayoutDescriptor<'_>` does not have this field
+   |
+   = note: available fields are: `immediate_size`
+
+error[E0063]: missing fields `cache` and `compilation_options` in initializer of `wgpu::ComputePipelineDescriptor<'_>`
+  --> rend3/src/util/scatter_copy.rs:59:56
+   |
+59 |         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
+   |                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^ missing `cache` and `compilation_options`
+
+error[E0308]: mismatched types
+   --> rend3/src/util/scatter_copy.rs:99:65
+    |
+ 99 |         let mapped_slice: &mut [u32] = bytemuck::cast_slice_mut(&mut mapped_range);
+    |                                        ------------------------ ^^^^^^^^^^^^^^^^^ expected `&mut [_]`, found `&mut Result<BufferViewMut, MapRangeError>`
+    |                                        |
+    |                                        arguments to this function are incorrect
+    |
+    = note: expected mutable reference `&mut [_]`
+               found mutable reference `&mut std::result::Result<BufferViewMut, MapRangeError>`
+note: function defined here
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bytemuck-1.25.2/src/lib.rs:423:8
+    |
+423 | pub fn cast_slice_mut<
+    |        ^^^^^^^^^^^^^^
+
+error[E0608]: cannot index into a value of type `std::result::Result<BufferViewMut, MapRangeError>`
+  --> rend3/src/util/upload.rs:59:20
+   |
+59 |             mapping[upload.staging_offset as usize..][..upload.data.len()].copy_from_slice(upload.data);
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0061]: this method takes 2 arguments but 3 arguments were supplied
+   --> rend3/src/graph/graph.rs:460:77
+    |
+460 |                 let profiler_query = data_core.profiler.try_lock().unwrap().begin_query(
+    |                                                                             ^^^^^^^^^^^
+...
+463 |                     &renderer.device,
+    |                     ---------------- unexpected argument #3 of type `&Arc<wgpu::Device>`
+    |
+note: method defined here
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-profiler-0.28.0/src/profiler.rs:232:12
+    |
+232 |     pub fn begin_query<Recorder: ProfilerCommandRecorder>(
+    |            ^^^^^^^^^^^
+help: remove the extra argument
+    |
+462 -                     &mut encoder_or_rpass,
+463 -                     &renderer.device,
+462 +                     &mut encoder_or_rpass,
+    |
+
+error[E0063]: missing field `depth_slice` in initializer of `wgpu::RenderPassColorAttachment<'_>`
+   --> rend3/src/graph/graph.rs:553:17
+    |
+553 |                 RenderPassColorAttachment {
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^ missing `depth_slice`
+
+error[E0063]: missing field `multiview_mask` in initializer of `wgpu::RenderPassDescriptor<'_>`
+   --> rend3/src/graph/graph.rs:614:36
+    |
+614 |         encoder.begin_render_pass(&RenderPassDescriptor {
+    |                                    ^^^^^^^^^^^^^^^^^^^^ missing `multiview_mask`
+
+error[E0308]: mismatched types
+    --> rend3/src/graph/texture_store.rs:37:21
+     |
+  37 |             format: desc.format,
+     |                     ^^^^^^^^^^^ expected `wgpu::TextureFormat`, found `rend3_types::TextureFormat`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0308]: mismatched types
+   --> rend3/src/graph/texture_store.rs:38:20
+    |
+ 38 |             usage: desc.usage,
+    |                    ^^^^^^^^^^ expected `wgpu::TextureUsages`, found `rend3_types::TextureUsages`
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |           |
+    |           this is the expected type
+    |           this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:159:1
+    |
+159 | / bitflags::bitflags! {
+160 | |     /// Different ways that you can use a texture.
+161 | |     ///
+162 | |     /// The usages determine what kind of memory the texture is allocated from and what
+...   |
+210 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> rend3/src/surface.rs:18:20
+    |
+ 18 |             usage: TextureUsages::RENDER_ATTACHMENT,
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `wgpu::TextureUsages`, found `rend3_types::TextureUsages`
+    |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+   --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.2/src/public.rs:17:9
+    |
+ 17 |           $vis struct $PublicBitFlags(<$PublicBitFlags as $crate::__private::PublicFlags>::Internal);
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |           |
+    |           this is the expected type
+    |           this is the found type
+    |
+   ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture.rs:159:1
+    |
+159 | / bitflags::bitflags! {
+160 | |     /// Different ways that you can use a texture.
+161 | |     ///
+162 | |     /// The usages determine what kind of memory the texture is allocated from and what
+...   |
+210 | | }
+    | |_- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+    = note: this error originates in the macro `$crate::__declare_public_bitflags` which comes from the expansion of the macro `bitflags::bitflags` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+    --> rend3/src/surface.rs:19:13
+     |
+  19 |             format,
+     |             ^^^^^^ expected `wgpu::TextureFormat`, found `rend3_types::TextureFormat`
+     |
+note: there are multiple different versions of crate `wgpu_types` in the dependency graph
+    --> /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-30.0.2/src/texture/format.rs:128:1
+     |
+ 128 | pub enum TextureFormat {
+     | ^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     |
+    ::: /home/cristian/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wgpu-types-0.19.2/src/lib.rs:2286:1
+     |
+2286 | pub enum TextureFormat {
+     | ---------------------- this is the found type
+     = help: you can use `cargo tree` to explore your dependency tree
+
+error[E0063]: missing field `color_space` in initializer of `wgpu::wgpu_types::SurfaceConfiguration<Vec<wgpu::TextureFormat>>`
+  --> rend3/src/surface.rs:17:10
+   |
+17 |         &SurfaceConfiguration {
+   |          ^^^^^^^^^^^^^^^^^^^^ missing `color_space`
+
+error[E0308]: mismatched types
+  --> rend3/src/util/scatter_copy.rs:63:26
+   |
+63 |             entry_point: "cs_main",
+   |                          ^^^^^^^^^ expected `Option<&str>`, found `&str`
+   |
+   = note:   expected enum `std::option::Option<&str>`
+           found reference `&'static str`
+help: try wrapping the expression in `Some`
+   |
+63 |             entry_point: Some("cs_main"),
+   |                          +++++         +
+
+Some errors have detailed explanations: E0061, E0063, E0308, E0560, E0599, E0608, E0614.
+For more information about an error, try `rustc --explain E0061`.
+warning: `rend3` (lib) generated 2 warnings
+error: could not compile `rend3` (lib) due to 45 previous errors; 2 warnings emitted

@@ -76,6 +76,7 @@ pub async fn test_app<A: App<T>, T: 'static>(mut config: TestConfiguration<A>) -
         control_flow: &mut |_| unreachable!(),
         event_loop_window_target: None,
         delta_t_seconds: 0.0,
+        marker: std::marker::PhantomData,
     });
 
     let image = download_image(&renderer, texture, config.size).await.unwrap();

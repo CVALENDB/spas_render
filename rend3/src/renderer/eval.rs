@@ -28,8 +28,7 @@ pub fn evaluate_instructions(renderer: &Renderer) -> InstructionEvaluationOutput
                     profiling::scope!("Add Skeleton");
                     let profiler_query = data_core.profiler.try_lock().unwrap().begin_query(
                         "Add Skeleton",
-                        &mut encoder,
-                        &renderer.device,
+                        &mut encoder
                     );
                     data_core.skeleton_manager.add(handle, *skeleton);
                     data_core.profiler.try_lock().unwrap().end_query(&mut encoder, profiler_query);

@@ -14,10 +14,7 @@ use rend3::{
     },
     ShaderPreProcessor,
 };
-use wgpu::{
-    BindGroupLayout, Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoder, ComputePassDescriptor,
-    ComputePipeline, ComputePipelineDescriptor, PipelineLayoutDescriptor, ShaderModuleDescriptor, ShaderStages,
-};
+use wgpu::{BindGroupLayout, Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoder, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, PipelineCompilationOptions, PipelineLayoutDescriptor, ShaderModuleDescriptor, ShaderStages};
 
 /// The per-skeleton data, as uploaded to the GPU compute shader.
 #[derive(Copy, Clone, ShaderType)]
@@ -70,9 +67,11 @@ fn build_gpu_skinning_input_buffers(ctx: &NodeExecutionContext) -> PreSkinningBu
         mapped_at_creation: true,
     });
 
-    let mut skinning_input_range = gpu_skinning_inputs.slice(..).get_mapped_range_mut();
-    let mut skinning_input_data = encase::DynamicStorageBuffer::new(&mut *skinning_input_range);
-    let mut joint_matrices_data = joint_matrices.slice(..).get_mapped_range_mut();
+    let mut skinning_input_bytes = vec![0u8; skinning_inputs_size as usize];
+    let mut skinning_input_data = encase::DynamicStorageBuffer::new(&mut skinning_input_bytes);
+    let mut joint_matrices_range = joint_matrices.slice(..).get_mapped_range_mut().unwrap();
+    let mut joint_matrices_view = joint_matrices_range.slice(..);
+    let joint_matrices_ptr = joint_matrices_view.as_raw_element_ptr().as_ptr() as *mut [[f32; 4]; 4];
 
     // Skeletons have a variable number of joints, so we need to keep track of
     // the global index here.
@@ -118,7 +117,6 @@ fn build_gpu_skinning_input_buffers(ctx: &NodeExecutionContext) -> PreSkinningBu
 
             skinning_input_data.write(&input).unwrap();
 
-            let joint_matrices_ptr = joint_matrices_data.as_mut_ptr() as *mut [[f32; 4]; 4];
             for joint_matrix in &skeleton.joint_matrices {
                 // Here, the access can't be OOB either: The joint_matrix_idx
                 // will get incremented once for every joint matrix, and the
@@ -130,8 +128,12 @@ fn build_gpu_skinning_input_buffers(ctx: &NodeExecutionContext) -> PreSkinningBu
         }
     }
 
+    drop(skinning_input_data);
+    let mut skinning_input_range = gpu_skinning_inputs.slice(..).get_mapped_range_mut().unwrap();
+    skinning_input_range.copy_from_slice(&skinning_input_bytes);
     drop(skinning_input_range);
-    drop(joint_matrices_data);
+    drop(joint_matrices_view);
+    drop(joint_matrices_range);
     gpu_skinning_inputs.unmap();
     joint_matrices.unmap();
 
@@ -157,8 +159,8 @@ impl GpuSkinner {
 
         let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bgl)],
+            immediate_size : 0
         });
 
         let module = device.create_shader_module(ShaderModuleDescriptor {
@@ -172,7 +174,9 @@ impl GpuSkinner {
             label: Some("Gpu skinning pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "main",
+            entry_point: Some("main"),
+            compilation_options: PipelineCompilationOptions::default(),
+            cache : None,
         });
 
         Self { bgl, pipeline }

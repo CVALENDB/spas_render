@@ -56,7 +56,7 @@ mod tests {
                 .collect(),
         );
 
-        term::emit(&mut writer.lock(), &config, &files, &diagnostic).expect("cannot write error");
+        term::emit_to_write_style(&mut writer.lock(), &config, &files, &diagnostic).expect("cannot write error");
     }
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
                 let sm = match naga::front::wgsl::parse_str(&output) {
                     Ok(m) => m,
                     Err(e) => {
-                        e.emit_to_stderr_with_path(&output, shader);
+                        eprintln!("{}", e.emit_to_string_with_path(&output, shader));
                         panic!();
                     }
                 };

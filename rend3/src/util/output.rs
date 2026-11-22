@@ -22,9 +22,9 @@ impl OutputFrame {
     }
 
     /// Present the surface, if needed.
-    pub fn present(self) {
+    pub fn present(self, queue: &wgpu::Queue) {
         if let Self::SurfaceAcquired { surface_tex: surface, .. } = self {
-            surface.present();
+            queue.present(surface);
         }
     }
 }

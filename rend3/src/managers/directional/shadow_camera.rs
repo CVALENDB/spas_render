@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3, Vec3A};
+use glam::{Vec3, Vec3A};
 use rend3_types::{Camera, CameraProjection, Handedness};
 
 use crate::managers::{CameraState, InternalDirectionalLight};
@@ -9,8 +9,8 @@ pub(super) fn shadow_camera(l: &InternalDirectionalLight, user_camera: &CameraSt
     let shadow_texel_size = l.inner.distance / l.inner.resolution as f32;
 
     let look_at = match user_camera.handedness() {
-        Handedness::Left => Mat4::look_at_lh,
-        Handedness::Right => Mat4::look_at_rh,
+        Handedness::Left => glam::camera::lh::view::look_at_mat4,
+        Handedness::Right => glam::camera::rh::view::look_at_mat4,
     };
 
     let origin_view = look_at(Vec3::ZERO, l.inner.direction, Vec3::Y);

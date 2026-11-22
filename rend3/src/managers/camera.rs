@@ -85,21 +85,23 @@ impl CameraState {
     }
 }
 
+use glam::camera::{lh, rh};
+
 fn compute_projection_matrix(data: Camera, handedness: Handedness, aspect_ratio: f32) -> Mat4 {
     match data.projection {
         CameraProjection::Orthographic { size } => {
             let half = size * 0.5;
             if handedness == Handedness::Left {
-                Mat4::orthographic_lh(-half.x, half.x, -half.y, half.y, half.z, -half.z)
+                lh::proj::directx::orthographic(-half.x, half.x, -half.y, half.y, half.z, -half.z)
             } else {
-                Mat4::orthographic_rh(-half.x, half.x, -half.y, half.y, half.z, -half.z)
+                rh::proj::directx::orthographic(-half.x, half.x, -half.y, half.y, half.z, -half.z)
             }
         }
         CameraProjection::Perspective { vfov, near } => {
             if handedness == Handedness::Left {
-                Mat4::perspective_infinite_reverse_lh(vfov.to_radians(), aspect_ratio, near)
+                lh::proj::directx::perspective_infinite_reverse(vfov.to_radians(), aspect_ratio, near)
             } else {
-                Mat4::perspective_infinite_reverse_rh(vfov.to_radians(), aspect_ratio, near)
+                rh::proj::directx::perspective_infinite_reverse(vfov.to_radians(), aspect_ratio, near)
             }
         }
         CameraProjection::Raw(proj) => proj,

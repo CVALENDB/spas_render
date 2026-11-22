@@ -102,6 +102,7 @@ impl rend3_framework::App for EguiExample {
                 &windowing.window,
                 Some(context.scale_factor),
                 None,
+                Some(context.renderer.limits.max_texture_dimension_2d as usize),
             ))
         } else {
             None
@@ -174,33 +175,36 @@ impl rend3_framework::App for EguiExample {
             egui::RawInput::default()
         };
 
-        data.context.begin_frame(input);
-
-        // Insert egui commands here
-        let ctx = &data.context;
-        egui::Window::new("Change color").resizable(true).show(ctx, |ui| {
-            ui.label("Change the color of the cube");
-            if ui.color_edit_button_rgba_unmultiplied(&mut data.color).changed() {
-                context.renderer.update_material(
-                    &data.material_handle.clone(),
-                    rend3_routine::pbr::PbrMaterial {
-                        albedo: rend3_routine::pbr::AlbedoComponent::Value(glam::Vec4::from(data.color)),
-                        transparency: rend3_routine::pbr::Transparency::Blend,
-                        ..rend3_routine::pbr::PbrMaterial::default()
-                    },
-                );
-            }
-            ui.label("Want to get rusty?");
-            if ui.add(egui::widgets::ImageButton::new((self.rust_logo, egui::Vec2::splat(64.0)))).clicked() {
-                webbrowser::open("https://www.rust-lang.org").expect("failed to open URL");
-            }
+        let color = &mut data.color;
+        let material_handle = &data.material_handle;
+        let rust_logo = self.rust_logo;
+        let renderer = context.renderer;
+        let full_output = data.context.run_ui(input, |ui| {
+            egui::Window::new("Change color").resizable(true).show(ui.ctx(), |ui| {
+                ui.label("Change the color of the cube");
+                if ui.color_edit_button_rgba_unmultiplied(color).changed() {
+                    renderer.update_material(
+                        &(*material_handle).clone(),
+                        rend3_routine::pbr::PbrMaterial {
+                            albedo: rend3_routine::pbr::AlbedoComponent::Value(glam::Vec4::from(*color)),
+                            transparency: rend3_routine::pbr::Transparency::Blend,
+                            ..rend3_routine::pbr::PbrMaterial::default()
+                        },
+                    );
+                }
+                ui.label("Want to get rusty?");
+                if ui
+                    .add(egui::Button::image(egui::Image::new((rust_logo, egui::Vec2::splat(64.0)))))
+                    .clicked()
+                {
+                    webbrowser::open("https://www.rust-lang.org").expect("failed to open URL");
+                }
+            });
         });
 
         let scale_factor = context.window.map(|w| w.scale_factor() as f32).unwrap_or(1.0);
 
-        // End the UI frame. Now let's draw the UI with our Backend, we could also
-        // handle the output here
-        let egui::FullOutput { shapes, textures_delta, .. } = data.context.end_frame();
+        let egui::FullOutput { shapes, textures_delta, .. } = full_output;
         let paint_jobs = data.context.tessellate(shapes, scale_factor);
 
         let input = rend3_egui::Input { clipped_meshes: &paint_jobs, textures_delta, context: data.context.clone() };
@@ -256,7 +260,7 @@ impl rend3_framework::App for EguiExample {
 
 pub fn main() {
     let app = EguiExample::default();
-    rend3_framework::start(app, winit::window::WindowBuilder::new().with_title("egui").with_maximized(true))
+    rend3_framework::start(app, winit::window::WindowAttributes::default().with_title("egui").with_maximized(true))
 }
 
 fn vertex(pos: [f32; 3]) -> glam::Vec3 {

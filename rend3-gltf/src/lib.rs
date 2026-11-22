@@ -1034,11 +1034,11 @@ where
                 rend3::types::TextureUsages::TEXTURE_BINDING | rend3::types::TextureUsages::RENDER_ATTACHMENT,
             );
 
-        let size: usize = reader.levels().map(|s| s.len()).sum();
+        let size: usize = reader.levels().map(|s| s.data.len()).sum();
 
         let mut data = Vec::with_capacity(size);
         for level in reader.levels() {
-            data.extend_from_slice(level);
+            data.extend_from_slice(level.data);
         }
 
         texture = Some(types::Texture {
@@ -1290,7 +1290,7 @@ pub mod util {
             | k2F::R64G64B64A64_UINT
             | k2F::R64G64B64A64_SINT
             | k2F::R64G64B64A64_SFLOAT => return None,
-            k2F::B10G11R11_UFLOAT_PACK32 => r3F::Rg11b10Float,
+            k2F::B10G11R11_UFLOAT_PACK32 => r3F::Rg11b10Ufloat,
             k2F::E5B9G9R9_UFLOAT_PACK32 => r3F::Rgb9e5Ufloat,
             k2F::D16_UNORM => return None,
             k2F::X8_D24_UNORM_PACK32 => r3F::Depth24Plus,
@@ -1492,7 +1492,9 @@ pub mod util {
     #[cfg(feature = "ddsfile")]
     pub fn map_dxgi_format(format: ddsfile::DxgiFormat, srgb: bool) -> Option<rend3::types::TextureFormat> {
         use ddsfile::DxgiFormat as d3F;
-        use rend3::types::TextureFormat as r3F;
+        use rend3::types::{AstcBlock, AstcChannel, TextureFormat as r3F};
+
+        let channel = if srgb { AstcChannel::UnormSrgb } else { AstcChannel::Unorm };
 
         Some(match format {
             d3F::Unknown => return None,
@@ -1514,7 +1516,7 @@ pub mod util {
             | d3F::R10G10B10A2_Typeless
             | d3F::R10G10B10A2_UNorm
             | d3F::R10G10B10A2_UInt => return None,
-            d3F::R11G11B10_Float => r3F::Rg11b10Float,
+            d3F::R11G11B10_Float => r3F::Rg11b10Ufloat,
             d3F::R8G8B8A8_Typeless | d3F::R8G8B8A8_UNorm | d3F::R8G8B8A8_UNorm_sRGB => {
                 if srgb {
                     r3F::Rgba8UnormSrgb
@@ -1620,8 +1622,50 @@ pub mod util {
             | d3F::B4G4R4A4_UNorm
             | d3F::P208
             | d3F::V208
-            | d3F::V408
-            | d3F::Force_UInt => return None,
+            | d3F::V408 => return None,
+            d3F::ASTC_4x4_Typeless | d3F::ASTC_4x4_UNorm | d3F::ASTC_4x4_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B4x4, channel }
+            }
+            d3F::ASTC_5x4_Typeless | d3F::ASTC_5x4_UNorm | d3F::ASTC_5x4_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B5x4, channel }
+            }
+            d3F::ASTC_5x5_Typeless | d3F::ASTC_5x5_UNorm | d3F::ASTC_5x5_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B5x5, channel }
+            }
+            d3F::ASTC_6x5_Typeless | d3F::ASTC_6x5_UNorm | d3F::ASTC_6x5_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B6x5, channel }
+            }
+            d3F::ASTC_6x6_Typeless | d3F::ASTC_6x6_UNorm | d3F::ASTC_6x6_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B6x6, channel }
+            }
+            d3F::ASTC_8x5_Typeless | d3F::ASTC_8x5_UNorm | d3F::ASTC_8x5_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B8x5, channel }
+            }
+            d3F::ASTC_8x6_Typeless | d3F::ASTC_8x6_UNorm | d3F::ASTC_8x6_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B8x6, channel }
+            }
+            d3F::ASTC_8x8_Typeless | d3F::ASTC_8x8_UNorm | d3F::ASTC_8x8_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B8x8, channel }
+            }
+            d3F::ASTC_10x5_Typeless | d3F::ASTC_10x5_UNorm | d3F::ASTC_10x5_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B10x5, channel }
+            }
+            d3F::ASTC_10x6_Typeless | d3F::ASTC_10x6_UNorm | d3F::ASTC_10x6_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B10x6, channel }
+            }
+            d3F::ASTC_10x8_Typeless | d3F::ASTC_10x8_UNorm | d3F::ASTC_10x8_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B10x8, channel }
+            }
+            d3F::ASTC_10x10_Typeless | d3F::ASTC_10x10_UNorm | d3F::ASTC_10x10_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B10x10, channel }
+            }
+            d3F::ASTC_12x10_Typeless | d3F::ASTC_12x10_UNorm | d3F::ASTC_12x10_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B12x10, channel }
+            }
+            d3F::ASTC_12x12_Typeless | d3F::ASTC_12x12_UNorm | d3F::ASTC_12x12_UNorm_sRGB => {
+                r3F::Astc { block: AstcBlock::B12x12, channel }
+            }
+            d3F::Force_UInt => return None,
         })
     }
 

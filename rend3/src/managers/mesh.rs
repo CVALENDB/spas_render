@@ -278,7 +278,9 @@ impl MeshManager {
 
         let max_buffer_size = device.limits().max_storage_buffer_binding_size;
 
-        let new_bytes = desired_bytes.min(max_buffer_size as u64);
+        let new_bytes = desired_bytes.min(max_buffer_size);
+        
+        let max_buffer_size = max_buffer_size as u32;
 
         if new_bytes == current_bytes {
             return Err(MeshCreationError::ExceededMaximumBufferSize { max_buffer_size });

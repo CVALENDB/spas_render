@@ -3,8 +3,9 @@
 //! Call [`EguiRenderRoutine::add_to_graph`] to add it to the graph.
 
 use std::{mem, sync::Arc};
-
-use egui::TexturesDelta;
+use ahash::{HashSet, HashSetExt};
+use egui::{TextureId, TexturesDelta};
+use egui_wgpu::RendererOptions;
 use glam::Vec4;
 use rend3::{
     graph::{NodeResourceUsage, RenderGraph, RenderPassTarget, RenderPassTargets, RenderTargetHandle},
@@ -16,7 +17,7 @@ use wgpu::TextureFormat;
 pub struct EguiRenderRoutine {
     pub internal: egui_wgpu::Renderer,
     screen_descriptor: egui_wgpu::ScreenDescriptor,
-    textures_to_free: Vec<egui::TextureId>,
+    textures_to_free: HashSet<TextureId>,
 }
 
 impl EguiRenderRoutine {
@@ -27,12 +28,13 @@ impl EguiRenderRoutine {
     pub fn new(
         renderer: &Renderer,
         surface_format: TextureFormat,
-        samples: SampleCount,
+        _samples: SampleCount,
         width: u32,
         height: u32,
         scale_factor: f32,
     ) -> Self {
-        let rpass = egui_wgpu::Renderer::new(&renderer.device, surface_format, None, samples as _);
+        let device = renderer.device.clone();
+        let rpass = egui_wgpu::Renderer::new(&*device, surface_format, RendererOptions::default());
 
         Self {
             internal: rpass,
@@ -40,7 +42,7 @@ impl EguiRenderRoutine {
                 size_in_pixels: [width, height],
                 pixels_per_point: scale_factor,
             },
-            textures_to_free: Vec::new(),
+            textures_to_free: HashSet::new(),
         }
     }
 
@@ -76,9 +78,10 @@ impl EguiRenderRoutine {
             for texture in textures_to_free {
                 self.internal.free_texture(&texture);
             }
-            for (id, image_delta) in input.textures_delta.set {
-                self.internal.update_texture(&ctx.renderer.device, &ctx.renderer.queue, id, &image_delta);
+            for (id, image_delta) in input.textures_delta.set.drain() {
+                self.internal.update_texture(&ctx.renderer.device, &ctx.renderer.queue, id, &image_delta[0]);
             }
+
             let mut cmd_buffer = ctx.renderer.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
             self.internal.update_buffers(
                 &ctx.renderer.device,
@@ -87,7 +90,11 @@ impl EguiRenderRoutine {
                 input.clipped_meshes,
                 &self.screen_descriptor,
             );
-            drop(cmd_buffer);
+            ctx.renderer.queue.submit(std::iter::once(cmd_buffer.finish()));
+
+            let rpass: &mut wgpu::RenderPass<'static> = unsafe { mem::transmute(rpass) };
+
+            self.internal.render(rpass, input.clipped_meshes, &self.screen_descriptor);
 
             self.internal.render(rpass, input.clipped_meshes, &self.screen_descriptor);
         });
@@ -142,14 +149,14 @@ impl EguiRenderRoutine {
         let texture_size = wgpu::Extent3d { width: dimensions.0, height: dimensions.1, depth_or_array_layers: 1 };
 
         queue.write_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo  {
                 texture: &image_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             image_rgba,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some((dimensions.0 / block_dimensions.0) * block_size),
                 rows_per_image: None,
