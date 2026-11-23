@@ -47,7 +47,10 @@ fn create_sampler(device: &Device, filter: FilterMode, compare: Option<CompareFu
         address_mode_w: AddressMode::Repeat,
         mag_filter: filter,
         min_filter: filter,
-        mipmap_filter: MipmapFilterMode::Linear,
+        mipmap_filter: match filter {
+            FilterMode::Linear => MipmapFilterMode::Linear,
+            FilterMode::Nearest => MipmapFilterMode::Nearest,
+        },
         lod_min_clamp: 0.0,
         lod_max_clamp: 100.0,
         compare,
